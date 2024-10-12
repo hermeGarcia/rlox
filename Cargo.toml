@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "compiler", "error_system",
+    "parser",
+]
+resolver = "2"
