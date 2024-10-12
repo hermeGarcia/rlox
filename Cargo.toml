@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "compiler", "error_system",
+    "compiler", "context", "error_system",
     "parser",
 ]
 resolver = "2"
