@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 error_system = { path = "../error_system" }
 parser = { path = "../parser" }
+context = { path = "../context" }
 
 [[bin]]
 path = "src/main.rs"

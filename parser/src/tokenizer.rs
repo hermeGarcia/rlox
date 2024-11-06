@@ -4,6 +4,7 @@ macro_rules! token {
             kind: $kind,
             start: $self.current,
             end: $self.current + $offset,
+            line: $self.line_number,
         }
     };
 }
@@ -26,6 +27,8 @@ pub struct Token {
     pub start: usize,
     /// End  of the token in the source file.
     pub end: usize,
+    /// Line where the token starts.
+    pub line: usize,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -76,6 +79,7 @@ pub enum TokenKind {
 
 pub struct TokenScanner<'a> {
     src: &'a [u8],
+    line_number: usize,
     current: usize,
 }
 
@@ -97,11 +101,16 @@ impl<'a> TokenScanner<'a> {
         TokenScanner {
             src,
             current: 0,
+            line_number: 0,
         }
     }
 
     fn next_token(&mut self) -> Token {
         while self.current().as_ref().map_or(false, u8::is_ascii_whitespace) {
+            if let Some(b'\n') = self.current() {
+                self.line_number += 1;
+            }
+
             self.current += 1;
         }
 
@@ -116,6 +125,7 @@ impl<'a> TokenScanner<'a> {
                 kind: TokenKind::Eof,
                 start: self.current,
                 end: self.current,
+                line: self.line_number,
             };
         };
 

@@ -1,18 +1,25 @@
+mod error;
 mod tokenizer;
 
-use error_system::formatted_error;
+use context::src_library::SourceKind;
+use error::UnknownToken;
+use error_system::error;
 use tokenizer::{TokenKind, TokenScanner};
 
-pub fn parse(code: &[u8]) {
+pub fn parse(src_id: SourceKind, code: &[u8]) -> Result<(), ()> {
     for token in TokenScanner::new(code) {
         println!("{token:?}");
 
         if let TokenKind::Unknown = token.kind {
-            let token_start = token.start;
-            let token_end = token.end;
-            let raw_token = std::str::from_utf8(&code[token_start..token_end]).unwrap();
-            formatted_error!("Unknown token: {raw_token} at {token_start}:{token_end}");
-            break;
+            error(UnknownToken {
+                start: token.start,
+                end: token.end,
+                line: token.line + 1,
+                source: src_id,
+            });
+            return Err(());
         }
     }
+
+    Ok(())
 }
