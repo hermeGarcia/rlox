@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 error_system = { path = "../error_system" }
 context = { path = "../context" }
+enum_dispatch = { workspace = true }

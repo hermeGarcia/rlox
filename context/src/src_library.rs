@@ -1,5 +1,13 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum SourceKind {
+pub struct SourceMetadata {
+    pub start: usize,
+    pub end: usize,
+    pub line: usize,
+    pub source: Source,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Source {
     Prompt,
     File(usize),
 }

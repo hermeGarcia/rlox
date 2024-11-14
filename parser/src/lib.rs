@@ -1,23 +1,21 @@
 mod error;
 mod tokenizer;
 
-use context::src_library::SourceKind;
-use error::UnknownToken;
-use error_system::error;
+use context::src_library::Source;
+use error::{ParserError, UnknownToken};
 use tokenizer::{TokenKind, TokenScanner};
 
-pub fn parse(src_id: SourceKind, code: &[u8]) -> Result<(), ()> {
+pub fn parse(src_id: Source, code: &[u8]) -> Result<(), ParserError> {
     for token in TokenScanner::new(code) {
         println!("{token:?}");
 
         if let TokenKind::Unknown = token.kind {
-            error(UnknownToken {
+            return Err(ParserError::from(UnknownToken {
                 start: token.start,
                 end: token.end,
-                line: token.line + 1,
+                line: token.line,
                 source: src_id,
-            });
-            return Err(());
+            }));
         }
     }
 

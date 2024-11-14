@@ -1,30 +1,42 @@
-use context::src_library::{FileLibrary, SourceKind};
+use context::src_library::{FileLibrary, Source, SourceMetadata};
 use std::io::{Stdout, Write, stdout};
 use std::sync::{Arc, LazyLock, Mutex};
 
-pub trait CompilerMessage: Sync + Send + 'static {
-    fn message(&self) -> &str;
-    fn start(&self) -> usize;
-    fn end(&self) -> usize;
-    fn kind(&self) -> SourceKind;
-    fn line(&self) -> usize;
+#[enum_dispatch::enum_dispatch]
+pub trait Message: Sync + Send + 'static {
+    fn description(&self) -> &str;
+    fn source_metadata(&self) -> SourceMetadata;
 }
 
-type Buffer = Vec<Arc<dyn CompilerMessage>>;
+pub struct Error(Arc<dyn Message>);
+impl<T: Message> From<T> for Error {
+    fn from(value: T) -> Self {
+        Error(Arc::new(value))
+    }
+}
+
+pub struct Warning(Arc<dyn Message>);
+impl<T: Message> From<T> for Warning {
+    fn from(value: T) -> Self {
+        Warning(Arc::new(value))
+    }
+}
+
+type Buffer = Vec<Arc<dyn Message>>;
 
 static ERRORS: LazyLock<Mutex<Buffer>> = LazyLock::new(|| Mutex::new(Buffer::default()));
 static WARNINGS: LazyLock<Mutex<Buffer>> = LazyLock::new(|| Mutex::new(Buffer::default()));
 
-pub fn error<Msg: CompilerMessage>(msg: Msg) {
-    let msg = Arc::new(msg);
+pub fn error<E: Into<Error>>(error: E) {
+    let error: Error = error.into();
     let mut error_log = ERRORS.lock().unwrap();
-    error_log.push(msg);
+    error_log.push(error.0);
 }
 
-pub fn warning<Msg: CompilerMessage>(msg: Msg) {
-    let msg = Arc::new(msg);
+pub fn warning<W: Into<Warning>>(warning: W) {
+    let warning: Warning = warning.into();
     let mut warning_log = WARNINGS.lock().unwrap();
-    warning_log.push(msg);
+    warning_log.push(warning.0);
 }
 
 pub fn report(library: &FileLibrary) {
@@ -33,13 +45,13 @@ pub fn report(library: &FileLibrary) {
     let mut stdout = stdout();
 
     for warning in warnings {
-        let message = warning.message();
+        let message = warning.description();
         writeln!(&mut stdout, "[WARNING] {message}.").unwrap();
         print_source(&mut stdout, warning.as_ref(), library);
     }
 
     for error in errors {
-        let message = error.message();
+        let message = error.description();
         writeln!(&mut stdout, "[ERROR] {message}.").unwrap();
 
         print_source(&mut stdout, error.as_ref(), library);
@@ -48,9 +60,11 @@ pub fn report(library: &FileLibrary) {
 
 fn print_source<Msg>(stdout: &mut Stdout, msg: &Msg, library: &FileLibrary)
 where
-    Msg: CompilerMessage + ?Sized,
+    Msg: Message + ?Sized,
 {
-    let SourceKind::File(index) = msg.kind() else {
+    let metadata = msg.source_metadata();
+
+    let Source::File(index) = metadata.source else {
         return;
     };
 
@@ -58,8 +72,8 @@ where
     let source_path = &source.path;
 
     let data_as_bytes = source.data.as_bytes();
-    let relevant_part = String::from_utf8_lossy(&data_as_bytes[msg.start()..msg.end()]);
-    let mut line_offset = msg.line();
+    let relevant_part = String::from_utf8_lossy(&data_as_bytes[metadata.start..metadata.end]);
+    let mut line_offset = metadata.line + 1;
 
     for line in relevant_part.lines() {
         writeln!(stdout, "  {line_offset}| {line}").unwrap();

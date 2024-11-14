@@ -1,31 +1,42 @@
-use context::src_library::SourceKind;
-use error_system::CompilerMessage;
+use context::src_library::{Source, SourceMetadata};
+use error_system::{Error, Message};
+
+pub enum ParserError {
+    UnknownTokenError(UnknownToken),
+}
+
+impl From<ParserError> for Error {
+    fn from(value: ParserError) -> Self {
+        match value {
+            ParserError::UnknownTokenError(e) => e.into(),
+        }
+    }
+}
 
 pub struct UnknownToken {
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) line: usize,
-    pub(crate) source: SourceKind,
+    pub(crate) source: Source,
 }
 
-impl CompilerMessage for UnknownToken {
-    fn message(&self) -> &str {
+impl From<UnknownToken> for ParserError {
+    fn from(value: UnknownToken) -> Self {
+        ParserError::UnknownTokenError(value)
+    }
+}
+
+impl Message for UnknownToken {
+    fn description(&self) -> &str {
         "Unknown token found"
     }
 
-    fn start(&self) -> usize {
-        self.start
-    }
-
-    fn end(&self) -> usize {
-        self.end
-    }
-
-    fn kind(&self) -> SourceKind {
-        self.source
-    }
-
-    fn line(&self) -> usize {
-        self.line
+    fn source_metadata(&self) -> SourceMetadata {
+        SourceMetadata {
+            start: self.start,
+            end: self.end,
+            line: self.line,
+            source: self.source,
+        }
     }
 }
