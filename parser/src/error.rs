@@ -35,7 +35,7 @@ impl Message for UnknownToken {
         SourceMetadata {
             start: self.start,
             end: self.end,
-            line: self.line,
+            line_start: self.line,
             source: self.source,
         }
     }

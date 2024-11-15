@@ -7,4 +7,3 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-enum_dispatch = "0.3.13"

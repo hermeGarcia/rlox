@@ -2,7 +2,6 @@ use context::src_library::{FileLibrary, Source, SourceMetadata};
 use std::io::{Stdout, Write, stdout};
 use std::sync::{Arc, LazyLock, Mutex};
 
-#[enum_dispatch::enum_dispatch]
 pub trait Message: Sync + Send + 'static {
     fn description(&self) -> &str;
     fn source_metadata(&self) -> SourceMetadata;
@@ -73,7 +72,7 @@ where
 
     let data_as_bytes = source.data.as_bytes();
     let relevant_part = String::from_utf8_lossy(&data_as_bytes[metadata.start..metadata.end]);
-    let mut line_offset = metadata.line + 1;
+    let mut line_offset = metadata.line_start + 1;
 
     for line in relevant_part.lines() {
         writeln!(stdout, "  {line_offset}| {line}").unwrap();
