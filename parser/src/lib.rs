@@ -10,7 +10,7 @@ pub fn parse(src_id: Source, code: &[u8]) -> Result<(), ParserError> {
         println!("{token:?}");
 
         if let TokenKind::Unknown = token.kind {
-            return Err(ParserError::from(UnknownToken {
+            return Err(Into::into(UnknownToken {
                 start: token.start,
                 end: token.end,
                 line: token.line,

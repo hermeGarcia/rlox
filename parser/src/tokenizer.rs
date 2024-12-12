@@ -233,25 +233,13 @@ impl<'a> TokenScanner<'a> {
             offset += 1;
         }
 
-        match &src_tail[..offset] {
-            b"and" => token!(TokenKind::And, self, offset),
-            b"class" => token!(TokenKind::Class, self, offset),
-            b"else" => token!(TokenKind::Else, self, offset),
-            b"false" => token!(TokenKind::False, self, offset),
-            b"for" => token!(TokenKind::For, self, offset),
-            b"fun" => token!(TokenKind::Fun, self, offset),
-            b"if" => token!(TokenKind::If, self, offset),
-            b"nil" => token!(TokenKind::Nil, self, offset),
-            b"or" => token!(TokenKind::Or, self, offset),
-            b"print" => token!(TokenKind::Print, self, offset),
-            b"return" => token!(TokenKind::Return, self, offset),
-            b"super" => token!(TokenKind::Super, self, offset),
-            b"this" => token!(TokenKind::This, self, offset),
-            b"true" => token!(TokenKind::True, self, offset),
-            b"var" => token!(TokenKind::Var, self, offset),
-            b"while" => token!(TokenKind::While, self, offset),
-            _ => token!(TokenKind::Identifier, self, offset),
-        }
+        let token_kind = KEYWORDS
+            .iter()
+            .find(|(key, _)| *key == &src_tail[..offset])
+            .map(|kw| kw.1)
+            .unwrap_or(TokenKind::Identifier);
+
+        token!(token_kind, self, offset)
     }
 
     /// Checks if the byte at `self.current + offset` matches the
@@ -265,3 +253,22 @@ impl<'a> TokenScanner<'a> {
         self.src.get(self.current).copied()
     }
 }
+
+const KEYWORDS: [(&[u8], TokenKind); 16] = [
+    (b"and", TokenKind::And),
+    (b"class", TokenKind::Class),
+    (b"else", TokenKind::Else),
+    (b"false", TokenKind::False),
+    (b"for", TokenKind::For),
+    (b"fun", TokenKind::Fun),
+    (b"if", TokenKind::If),
+    (b"nil", TokenKind::Nil),
+    (b"or", TokenKind::Or),
+    (b"print", TokenKind::Print),
+    (b"return", TokenKind::Return),
+    (b"super", TokenKind::Super),
+    (b"this", TokenKind::This),
+    (b"true", TokenKind::True),
+    (b"var", TokenKind::Var),
+    (b"while", TokenKind::While),
+];

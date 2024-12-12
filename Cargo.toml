@@ -2,7 +2,7 @@
 
 members = [
     "compiler", "context", "error_system",
-    "parser",
+    "parser", "rlox_ast",
 ]
 resolver = "2"
 
