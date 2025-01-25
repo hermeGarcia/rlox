@@ -1,5 +1,4 @@
-use context::src_library::{FileLibrary, Source, SourceFile};
-use error_system::Error;
+use context::{FileLibrary, Source, SourceFile};
 use std::fs::read_to_string;
 use std::io;
 use std::io::Result as IoResult;
@@ -32,18 +31,10 @@ fn file_mode(file_path: &str) -> ExitCode {
         Err(err) => abort!("Could not read {file_path:?}: {err}"),
     };
 
-    match compile(Source::File(src_id), &library[src_id].data) {
-        Ok(()) => ExitCode::SUCCESS,
-
-        Err(error) => {
-            error_system::error(error);
-            error_system::report(&library);
-            ExitCode::FAILURE
-        }
-    }
+    compile(Source::File(src_id), &library[src_id].data, &library)
 }
 
-fn prompt_mode() -> ExitCode {
+fn prompt_mode() -> ! {
     let mut output = io::stdout();
     let mut buffer = String::new();
     let library = FileLibrary::default();
@@ -54,19 +45,19 @@ fn prompt_mode() -> ExitCode {
 
         io::stdin().read_line(&mut buffer).unwrap();
 
-        if let Err(error) = compile(Source::Prompt, &buffer) {
-            error_system::error(error);
-            error_system::report(&library);
-        }
+        compile(Source::Prompt, &buffer, &library);
 
         buffer.clear();
     }
 }
 
-fn compile(src_id: Source, code: &str) -> Result<(), Error> {
-    parser::parse(src_id, code.as_bytes())?;
+fn compile(src_id: Source, code: &str, library: &FileLibrary) -> ExitCode {
+    let Ok(_ast) = parser::parse(src_id, code.as_bytes()) else {
+        error_system::report(library);
+        return ExitCode::FAILURE;
+    };
 
-    Ok(())
+    ExitCode::SUCCESS
 }
 
 pub fn read_source<P: Into<PathBuf>>(path: P, library: &mut FileLibrary) -> IoResult<usize> {

@@ -1,9 +1,9 @@
-use context::src_library::{FileLibrary, Source, SourceMetadata};
+use context::{FileLibrary, Source, SourceMetadata};
 use std::io::{Stdout, Write, stdout};
 use std::sync::{Arc, LazyLock, Mutex};
 
 pub trait Message: Sync + Send + 'static {
-    fn description(&self) -> &str;
+    fn description(&self) -> String;
     fn source_metadata(&self) -> SourceMetadata;
 }
 

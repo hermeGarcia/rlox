@@ -25,13 +25,13 @@ pub struct Token {
     pub kind: TokenKind,
     /// First byte of the token in the source file.
     pub start: usize,
-    /// End  of the token in the source file.
+    /// End of the token in the source file.
     pub end: usize,
     /// Line where the token starts.
     pub line: usize,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TokenKind {
     LeftParen,
     RightParen,
@@ -77,13 +77,13 @@ pub enum TokenKind {
     Unknown,
 }
 
-pub struct TokenScanner<'a> {
+pub struct TokenStream<'a> {
     src: &'a [u8],
     line_number: usize,
     current: usize,
 }
 
-impl<'a> Iterator for TokenScanner<'a> {
+impl Iterator for TokenStream<'_> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -96,17 +96,17 @@ impl<'a> Iterator for TokenScanner<'a> {
     }
 }
 
-impl<'a> TokenScanner<'a> {
-    pub fn new(src: &[u8]) -> TokenScanner {
-        TokenScanner {
+impl TokenStream<'_> {
+    pub fn new(src: &[u8]) -> TokenStream {
+        TokenStream {
             src,
             current: 0,
             line_number: 0,
         }
     }
 
-    fn next_token(&mut self) -> Token {
-        while self.current().as_ref().map_or(false, u8::is_ascii_whitespace) {
+    pub fn next_token(&mut self) -> Token {
+        while self.current().as_ref().is_some_and(u8::is_ascii_whitespace) {
             if let Some(b'\n') = self.current() {
                 self.line_number += 1;
             }
@@ -116,10 +116,11 @@ impl<'a> TokenScanner<'a> {
 
         let token = self.scan_token();
         self.current = token.end;
+
         token
     }
 
-    fn scan_token(&self) -> Token {
+    fn scan_token(&mut self) -> Token {
         let Some(current_token) = self.current() else {
             return Token {
                 kind: TokenKind::Eof,
@@ -175,18 +176,21 @@ impl<'a> TokenScanner<'a> {
         }
     }
 
-    fn inline_comment(&self) -> Token {
+    fn inline_comment(&mut self) -> Token {
         let mut comment_offset = 0;
 
         for (offset, &i) in self.src[self.current..].iter().enumerate() {
-            comment_offset = offset;
+            comment_offset = offset + 1;
 
             if i == b'\n' {
                 break;
             }
         }
 
-        token!(TokenKind::Comment, self, comment_offset)
+        let token = token!(TokenKind::Comment, self, comment_offset);
+        self.line_number += 1;
+
+        token
     }
 
     fn string(&self) -> Token {
@@ -229,7 +233,7 @@ impl<'a> TokenScanner<'a> {
         let belongs_in_identifier = |token_byte: &u8| token_byte.is_ascii_alphanumeric() || (*token_byte == b'_');
 
         let mut offset = 0;
-        while src_tail.get(offset).map_or(false, belongs_in_identifier) {
+        while src_tail.get(offset).is_some_and(belongs_in_identifier) {
             offset += 1;
         }
 
@@ -246,7 +250,7 @@ impl<'a> TokenScanner<'a> {
     /// expected one, false if the final index is out of bounds.
     fn matches(&self, offset: usize, expect: u8) -> bool {
         let possible_token = self.src.get(self.current + offset);
-        possible_token.map_or(false, |token| *token == expect)
+        possible_token.is_some_and(|token| *token == expect)
     }
 
     fn current(&self) -> Option<u8> {

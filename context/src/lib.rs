@@ -1,10 +1,51 @@
-pub mod src_library;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SourceMetadata {
+    pub start: usize,
+    pub end: usize,
+    pub line_start: usize,
+    pub source: Source,
+}
 
-pub use src_library::FileLibrary;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Source {
+    Prompt,
+    File(usize),
+}
 
-use rlox_ast::{ExprVec, Expression};
+#[derive(Clone)]
+pub struct SourceFile {
+    pub path: String,
+    pub data: String,
+}
 
-pub struct Context {
-    pub file_library: FileLibrary,
-    pub expr_arena: ExprVec<Expression>,
+#[derive(Default, Clone)]
+pub struct FileLibrary {
+    source: Vec<SourceFile>,
+}
+
+impl std::ops::Index<usize> for FileLibrary {
+    type Output = SourceFile;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.source[index]
+    }
+}
+
+impl std::ops::IndexMut<usize> for FileLibrary {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.source[index]
+    }
+}
+
+impl FileLibrary {
+    pub fn new() -> FileLibrary {
+        FileLibrary::default()
+    }
+
+    pub fn add(&mut self, source: SourceFile) -> usize {
+        let src_id = self.source.len();
+        self.source.push(source);
+
+        src_id
+    }
 }
