@@ -167,16 +167,17 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         return primary(ctxt, ast);
     };
 
-    let expr = Expr::UnaryExpr(expr::Unary {
+    let unary_expr = expr::Unary {
         operator,
         operand: primary(ctxt, ast)?,
-    });
+    };
 
-    let unary = ast.add(expr);
+    let operand_metadata = *ast.get(unary_expr.operand);
+    let unary = ast.add(Expr::UnaryExpr(unary_expr));
 
     ast.attach(unary, SourceMetadata {
         start: first_token.start,
-        end: ctxt.peek().start,
+        end: operand_metadata.end,
         line_start: first_token.line,
         source: ctxt.src_id,
     });
