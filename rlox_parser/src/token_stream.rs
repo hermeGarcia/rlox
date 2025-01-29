@@ -183,14 +183,13 @@ impl TokenStream<'_> {
             comment_offset = offset + 1;
 
             if i == b'\n' {
-                break;
+                let token = token!(TokenKind::Comment, self, comment_offset);
+                self.line_number += 1;
+                return token;
             }
         }
 
-        let token = token!(TokenKind::Comment, self, comment_offset);
-        self.line_number += 1;
-
-        token
+        token!(TokenKind::Comment, self, comment_offset)
     }
 
     fn string(&self) -> Token {
@@ -276,3 +275,121 @@ const KEYWORDS: [(&[u8], TokenKind); 16] = [
     (b"var", TokenKind::Var),
     (b"while", TokenKind::While),
 ];
+
+#[cfg(test)]
+mod tests {
+    use test_case::test_case;
+
+    use super::*;
+
+    #[test_case(b"// This is a comment", TokenKind::Comment; "comment")]
+    #[test_case(b"@", TokenKind::Unknown; "unknown")]
+    #[test_case(b"while", TokenKind::While; "while_stmt")]
+    #[test_case(b"var", TokenKind::Var;"var")]
+    #[test_case(b"true", TokenKind::True; "true_case")]
+    #[test_case(b"this", TokenKind::This; "this")]
+    #[test_case(b"super", TokenKind::Super; "super_op")]
+    #[test_case(b"return", TokenKind::Return; "return_stmt")]
+    #[test_case(b"print", TokenKind::Print; "print")]
+    #[test_case(b"or", TokenKind::Or; "or")]
+    #[test_case(b"nil", TokenKind::Nil; "nil")]
+    #[test_case(b"if", TokenKind::If; "if_case")]
+    #[test_case(b"for", TokenKind::For; "for_loop")]
+    #[test_case(b"fun", TokenKind::Fun; "fun")]
+    #[test_case(b"false", TokenKind::False; "false_case")]
+    #[test_case(b"else", TokenKind::Else; "else_case")]
+    #[test_case(b"class", TokenKind::Class; "class")]
+    #[test_case(b"and", TokenKind::And; "and")]
+    #[test_case(b"42.24", TokenKind::Decimal; "decimal")]
+    #[test_case(b"42", TokenKind::Integer; "integer")]
+    #[test_case(b"\"this is a string\"", TokenKind::String; "string")]
+    #[test_case(b"id32_id", TokenKind::Identifier; "identifier_underscore")]
+    #[test_case(b"id32", TokenKind::Identifier; "identifier_alphanumeric")]
+    #[test_case(b"id", TokenKind::Identifier; "identifier_alpha")]
+    #[test_case(b"<=", TokenKind::LessEqual; "less_equal")]
+    #[test_case(b"<", TokenKind::Less; "less")]
+    #[test_case(b">=", TokenKind::GreaterEqual; "greater_equal")]
+    #[test_case(b">", TokenKind::Greater; "greater")]
+    #[test_case(b"==", TokenKind::EqualEqual; "equal_equal")]
+    #[test_case(b"=", TokenKind::Equal; "equal")]
+    #[test_case(b"!=", TokenKind::BangEqual; "bang_equal")]
+    #[test_case(b"!", TokenKind::Bang; "bang")]
+    #[test_case(b"*", TokenKind::Star; "star")]
+    #[test_case(b"/", TokenKind::Slash; "slash")]
+    #[test_case(b";", TokenKind::Semicolon; "semicolon")]
+    #[test_case(b"+", TokenKind::Plus; "plus")]
+    #[test_case(b"-", TokenKind::Minus; "minus")]
+    #[test_case(b".", TokenKind::Dot; "dot")]
+    #[test_case(b",", TokenKind::Comma; "comma")]
+    #[test_case(b"}", TokenKind::RightBrace; "right_brace")]
+    #[test_case(b"{", TokenKind::LeftBrace; "left_brace")]
+    #[test_case(b")", TokenKind::RightParen; "right_paren")]
+    #[test_case(b"(", TokenKind::LeftParen; "left_paren")]
+    fn single_token_test(source: &[u8], kind: TokenKind) {
+        let mut stream = TokenStream::new(source);
+        let token = stream.next_token();
+
+        assert_eq!(token.kind, kind);
+        assert_eq!(&source[token.start..token.end], source);
+        assert_eq!(token.line, 0);
+
+        let token = stream.next_token();
+
+        assert_eq!(token.kind, TokenKind::Eof);
+        assert_eq!(token.start, source.len());
+        assert_eq!(token.end, source.len());
+        assert_eq!(token.line, 0);
+    }
+
+    #[test]
+    fn test_inline_comment() {
+        let source = r#"
+        // This is a comment
+        if true {
+            // This is also a comment
+        }
+        // This is my final comment"#;
+
+        let mut stream = TokenStream::new(source.as_bytes());
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::Comment);
+        assert_eq!(&source[token.start..token.end], "// This is a comment\n");
+        assert_eq!(token.line, 1);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::If);
+        assert_eq!(&source[token.start..token.end], "if");
+        assert_eq!(token.line, 2);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::True);
+        assert_eq!(&source[token.start..token.end], "true");
+        assert_eq!(token.line, 2);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::LeftBrace);
+        assert_eq!(&source[token.start..token.end], "{");
+        assert_eq!(token.line, 2);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::Comment);
+        assert_eq!(&source[token.start..token.end], "// This is also a comment\n");
+        assert_eq!(token.line, 3);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::RightBrace);
+        assert_eq!(&source[token.start..token.end], "}");
+        assert_eq!(token.line, 4);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::Comment);
+        assert_eq!(&source[token.start..token.end], "// This is my final comment");
+        assert_eq!(token.line, 5);
+
+        let token = stream.next_token();
+        assert_eq!(token.kind, TokenKind::Eof);
+        assert_eq!(source.len(), token.start);
+        assert_eq!(token.line, 5);
+    }
+}

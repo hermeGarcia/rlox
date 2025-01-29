@@ -19,11 +19,11 @@ pub struct SourceFile {
 }
 
 #[derive(Default, Clone)]
-pub struct FileLibrary {
+pub struct SourceLibrary {
     source: Vec<SourceFile>,
 }
 
-impl std::ops::Index<usize> for FileLibrary {
+impl std::ops::Index<usize> for SourceLibrary {
     type Output = SourceFile;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -31,15 +31,15 @@ impl std::ops::Index<usize> for FileLibrary {
     }
 }
 
-impl std::ops::IndexMut<usize> for FileLibrary {
+impl std::ops::IndexMut<usize> for SourceLibrary {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.source[index]
     }
 }
 
-impl FileLibrary {
-    pub fn new() -> FileLibrary {
-        FileLibrary::default()
+impl SourceLibrary {
+    pub fn new() -> SourceLibrary {
+        SourceLibrary::default()
     }
 
     pub fn add(&mut self, source: SourceFile) -> usize {

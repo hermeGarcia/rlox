@@ -1,4 +1,4 @@
-use context::{FileLibrary, Source, SourceMetadata};
+use rlox_source::{Source, SourceLibrary, SourceMetadata};
 use std::io::{Stdout, Write, stdout};
 use std::sync::{Arc, LazyLock, Mutex};
 
@@ -38,7 +38,7 @@ pub fn warning<W: Into<Warning>>(warning: W) {
     warning_log.push(warning.0);
 }
 
-pub fn report(library: &FileLibrary) {
+pub fn report(library: &SourceLibrary) {
     let warnings: Buffer = std::mem::take(WARNINGS.lock().unwrap().as_mut());
     let errors: Buffer = std::mem::take(ERRORS.lock().unwrap().as_mut());
     let mut stdout = stdout();
@@ -57,7 +57,7 @@ pub fn report(library: &FileLibrary) {
     }
 }
 
-fn print_source<Msg>(stdout: &mut Stdout, msg: &Msg, library: &FileLibrary)
+fn print_source<Msg>(stdout: &mut Stdout, msg: &Msg, library: &SourceLibrary)
 where
     Msg: Message + ?Sized,
 {

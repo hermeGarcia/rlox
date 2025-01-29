@@ -1,6 +1,6 @@
-use context::SourceMetadata;
 use rlox_ast::expr;
 use rlox_ast::{Ast, AstElem, AstProperty, Expr, ExprId};
+use rlox_source::SourceMetadata;
 
 use crate::error;
 use crate::token_stream::{Token, TokenKind};
@@ -262,4 +262,64 @@ where
     }
 
     match_result
+}
+
+#[cfg(test)]
+mod tests {
+    use expr::*;
+    use rlox_source::Source;
+    use test_case::test_case;
+
+    use super::*;
+
+    fn debug_fmt(expr_id: ExprId, ast: &Ast) -> String {
+        match &ast[expr_id] {
+            Expr::BinaryExpr(binary) => {
+                let lhs = debug_fmt(binary.lhs, ast);
+                let rhs = debug_fmt(binary.rhs, ast);
+                format!("{:?}({lhs}, {rhs})", binary.operator)
+            }
+            Expr::UnaryExpr(unary) => {
+                let operand = debug_fmt(unary.operand, ast);
+                format!("{:?}({operand})", unary.operator)
+            }
+
+            other => format!("{other:?}"),
+        }
+    }
+
+    #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, Expr::Natural(12), Expr::Natural(2)))]
+    #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, Expr::Natural(2)))]
+    #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, Expr::Natural(12), Expr::Natural(3)))]
+    #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, Expr::Natural(12), Expr::Natural(3)))]
+    fn composed_parsing(source: &[u8], expected: &str) {
+        let mut ctxt = Context::new(Source::Prompt, source);
+        let mut ast = Ast::default();
+        let expr_id = parse(&mut ctxt, &mut ast).unwrap();
+
+        assert_eq!(&debug_fmt(expr_id, &ast), expected);
+
+        let metadata: &SourceMetadata = ast.get(expr_id);
+        assert_eq!(metadata.source, Source::Prompt);
+        assert_eq!(metadata.line_start, 0);
+        assert_eq!(&source[metadata.start..metadata.end], source);
+    }
+
+    #[test_case(b"12.34", Expr::Decimal(12.34))]
+    #[test_case(b"12", Expr::Natural(12))]
+    #[test_case(b"nil", Expr::Nil)]
+    #[test_case(b"true", Expr::Boolean(true))]
+    #[test_case(b"false", Expr::Boolean(false))]
+    fn primary_parsing(source: &[u8], expected: Expr) {
+        let mut ctxt = Context::new(Source::Prompt, source);
+        let mut ast = Ast::default();
+        let expr_id = parse(&mut ctxt, &mut ast).unwrap();
+
+        assert_eq!(format!("{expected:?}"), format!("{:?}", ast[expr_id]));
+
+        let metadata: &SourceMetadata = ast.get(expr_id);
+        assert_eq!(metadata.source, Source::Prompt);
+        assert_eq!(metadata.line_start, 0);
+        assert_eq!(&source[metadata.start..metadata.end], source);
+    }
 }

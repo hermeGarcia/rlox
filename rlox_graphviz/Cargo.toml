@@ -1,0 +1,16 @@
+[package]
+name = "rlox_graphviz"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rlox_errors = { path = "../rlox_errors" }
+rlox_parser = { path = "../rlox_parser" }
+rlox_source = { path = "../rlox_source" }
+rlox_ast = { path = "../rlox_ast" }
+
+[[bin]]
+path = "src/main.rs"
+name = "rlox-to-graph"
+test = false
+bench = false

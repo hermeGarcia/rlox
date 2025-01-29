@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-context = { path = "../context" }
+rlox_source = { path = "../rlox_source" }

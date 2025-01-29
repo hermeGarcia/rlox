@@ -2,9 +2,9 @@ mod error;
 mod expression;
 mod token_stream;
 
-use context::Source;
 use error::ParserError;
 use rlox_ast::Ast;
+use rlox_source::Source;
 use token_stream::{Token, TokenKind, TokenStream};
 
 type ParserResult<T> = Result<T, ParserError>;
@@ -87,14 +87,14 @@ pub fn parse(src_id: Source, code: &[u8]) -> Result<Ast, Ast> {
     while !ctxt.is_at_end() {
         if let Err(error) = expression::parse(&mut ctxt, &mut ast) {
             is_valid = false;
-            error_system::error(error);
+            rlox_errors::error(error);
             panic_mode(&mut ctxt);
 
             continue;
         }
 
         if !ctxt.consume_if(TokenKind::Semicolon) {
-            error_system::error(ParserError::from(error::UnexpectedToken {
+            rlox_errors::error(ParserError::from(error::UnexpectedToken {
                 start: ctxt.peek().start,
                 end: ctxt.peek().end,
                 line: ctxt.peek().line,

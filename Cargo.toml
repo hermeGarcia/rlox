@@ -1,9 +1,10 @@
 [workspace]
 
 members = [
-    "compiler", "context", "error_system",
-    "parser", "rlox_ast",
+    "rlox_compiler", "rlox_source", "rlox_errors",
+    "rlox_parser", "rlox_ast", "rlox_graphviz",
 ]
 resolver = "2"
 
 [workspace.dependencies]
+test-case = "3.3.1"

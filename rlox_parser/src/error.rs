@@ -1,5 +1,5 @@
-use context::{Source, SourceMetadata};
-use error_system::{Error, Message};
+use rlox_errors::{Error, Message};
+use rlox_source::{Source, SourceMetadata};
 
 use crate::token_stream::TokenKind;
 

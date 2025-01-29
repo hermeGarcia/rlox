@@ -3,7 +3,7 @@ pub mod stmt;
 
 pub use expr::Expr;
 
-use context::SourceMetadata;
+use rlox_source::SourceMetadata;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 
@@ -118,5 +118,11 @@ impl AstProperty<SourceMetadata, ExprId> for Ast {
         };
 
         metadata
+    }
+}
+
+impl Ast {
+    pub fn expr_ids(&self) -> impl DoubleEndedIterator<Item = ExprId> {
+        (0..self.exprs.inner.len()).map(ExprId)
     }
 }

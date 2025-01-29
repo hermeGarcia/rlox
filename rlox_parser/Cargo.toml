@@ -1,0 +1,12 @@
+[package]
+name = "rlox_parser"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rlox_errors = { path = "../rlox_errors" }
+rlox_source = { path = "../rlox_source" }
+rlox_ast = { path = "../rlox_ast" }
+test-case= { workspace = true }

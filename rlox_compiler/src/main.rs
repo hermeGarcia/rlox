@@ -1,4 +1,4 @@
-use context::{FileLibrary, Source, SourceFile};
+use rlox_source::{Source, SourceFile, SourceLibrary};
 use std::fs::read_to_string;
 use std::io;
 use std::io::Result as IoResult;
@@ -24,7 +24,7 @@ pub fn main() -> ExitCode {
 }
 
 fn file_mode(file_path: &str) -> ExitCode {
-    let mut library = FileLibrary::default();
+    let mut library = SourceLibrary::default();
 
     let src_id = match read_source(file_path, &mut library) {
         Ok(id) => id,
@@ -37,7 +37,7 @@ fn file_mode(file_path: &str) -> ExitCode {
 fn prompt_mode() -> ! {
     let mut output = io::stdout();
     let mut buffer = String::new();
-    let library = FileLibrary::default();
+    let library = SourceLibrary::default();
 
     loop {
         write!(&mut output, "> ").unwrap();
@@ -51,16 +51,16 @@ fn prompt_mode() -> ! {
     }
 }
 
-fn compile(src_id: Source, code: &str, library: &FileLibrary) -> ExitCode {
-    let Ok(_ast) = parser::parse(src_id, code.as_bytes()) else {
-        error_system::report(library);
+fn compile(src_id: Source, code: &str, library: &SourceLibrary) -> ExitCode {
+    let Ok(_ast) = rlox_parser::parse(src_id, code.as_bytes()) else {
+        rlox_errors::report(library);
         return ExitCode::FAILURE;
     };
 
     ExitCode::SUCCESS
 }
 
-pub fn read_source<P: Into<PathBuf>>(path: P, library: &mut FileLibrary) -> IoResult<usize> {
+pub fn read_source<P: Into<PathBuf>>(path: P, library: &mut SourceLibrary) -> IoResult<usize> {
     let path: PathBuf = path.into().canonicalize()?;
     let source = read_to_string(&path)?;
 
