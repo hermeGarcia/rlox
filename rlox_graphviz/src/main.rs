@@ -43,7 +43,7 @@ fn compile(src_id: Source, code: &str, library: &SourceLibrary, output_path: &st
         return ExitCode::FAILURE;
     };
 
-    match rlox_graphviz::expression_ast::write(&ast, &mut output) {
+    match rlox_graphviz::graph(&ast, &mut output) {
         Ok(_) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("Failed writing {error:?}");

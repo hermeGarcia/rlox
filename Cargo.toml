@@ -2,7 +2,7 @@
 
 members = [
     "rlox_compiler", "rlox_source", "rlox_errors",
-    "rlox_parser", "rlox_ast", "rlox_graphviz",
+    "rlox_parser", "rlox_ast", "rlox_graphviz", "rlox_interpreter",
 ]
 resolver = "2"
 

@@ -2,6 +2,7 @@ pub mod expr;
 pub mod stmt;
 
 pub use expr::Expr;
+pub use stmt::Stmt;
 
 use rlox_source::SourceMetadata;
 use std::marker::PhantomData;
@@ -25,6 +26,15 @@ trait AstIndex {
 pub struct ExprId(usize);
 
 impl AstIndex for ExprId {
+    fn inner(&self) -> usize {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StmtId(usize);
+
+impl AstIndex for StmtId {
     fn inner(&self) -> usize {
         self.0
     }
@@ -70,8 +80,11 @@ impl<Elem, Index: AstIndex> AstVec<Elem, Index> {
 
 #[derive(Default)]
 pub struct Ast {
+    roots: Vec<StmtId>,
     exprs: AstVec<Expr, ExprId>,
-    exprs_metadata: AstVec<Option<SourceMetadata>, ExprId>,
+    expr_metadata: AstVec<Option<SourceMetadata>, ExprId>,
+    stmts: AstVec<Stmt, StmtId>,
+    stmt_metadata: AstVec<Option<SourceMetadata>, StmtId>,
 }
 
 impl Index<ExprId> for Ast {
@@ -82,9 +95,23 @@ impl Index<ExprId> for Ast {
     }
 }
 
+impl Index<StmtId> for Ast {
+    type Output = Stmt;
+
+    fn index(&self, index: StmtId) -> &Self::Output {
+        &self.stmts[index]
+    }
+}
+
 impl IndexMut<ExprId> for Ast {
     fn index_mut(&mut self, index: ExprId) -> &mut Self::Output {
         &mut self.exprs[index]
+    }
+}
+
+impl IndexMut<StmtId> for Ast {
+    fn index_mut(&mut self, index: StmtId) -> &mut Self::Output {
+        &mut self.stmts[index]
     }
 }
 
@@ -93,19 +120,30 @@ impl AstElem<Expr, ExprId> for Ast {
         let expr_id = ExprId(self.exprs.len());
 
         self.exprs.push(elem);
-        self.exprs_metadata.push(None);
+        self.expr_metadata.push(None);
 
         expr_id
     }
 }
 
+impl AstElem<Stmt, StmtId> for Ast {
+    fn add(&mut self, elem: Stmt) -> StmtId {
+        let stmt_id = StmtId(self.stmts.len());
+
+        self.stmts.push(elem);
+        self.stmt_metadata.push(None);
+
+        stmt_id
+    }
+}
+
 impl AstProperty<SourceMetadata, ExprId> for Ast {
     fn attach(&mut self, id: ExprId, property: SourceMetadata) {
-        self.exprs_metadata[id] = Some(property);
+        self.expr_metadata[id] = Some(property);
     }
 
     fn get(&self, id: ExprId) -> &SourceMetadata {
-        let Some(metadata) = &self.exprs_metadata[id] else {
+        let Some(metadata) = &self.expr_metadata[id] else {
             panic!("{id:?} does not have metadata");
         };
 
@@ -113,7 +151,29 @@ impl AstProperty<SourceMetadata, ExprId> for Ast {
     }
 
     fn get_mut(&mut self, id: ExprId) -> &mut SourceMetadata {
-        let Some(metadata) = &mut self.exprs_metadata[id] else {
+        let Some(metadata) = &mut self.expr_metadata[id] else {
+            panic!("{id:?} does not have metadata");
+        };
+
+        metadata
+    }
+}
+
+impl AstProperty<SourceMetadata, StmtId> for Ast {
+    fn attach(&mut self, id: StmtId, property: SourceMetadata) {
+        self.stmt_metadata[id] = Some(property);
+    }
+
+    fn get(&self, id: StmtId) -> &SourceMetadata {
+        let Some(metadata) = &self.stmt_metadata[id] else {
+            panic!("{id:?} does not have metadata");
+        };
+
+        metadata
+    }
+
+    fn get_mut(&mut self, id: StmtId) -> &mut SourceMetadata {
+        let Some(metadata) = &mut self.stmt_metadata[id] else {
             panic!("{id:?} does not have metadata");
         };
 
@@ -122,7 +182,11 @@ impl AstProperty<SourceMetadata, ExprId> for Ast {
 }
 
 impl Ast {
-    pub fn expr_ids(&self) -> impl DoubleEndedIterator<Item = ExprId> {
-        (0..self.exprs.inner.len()).map(ExprId)
+    pub fn record_as_root(&mut self, stmt_id: StmtId) {
+        self.roots.push(stmt_id);
+    }
+
+    pub fn roots(&self) -> &[StmtId] {
+        &self.roots
     }
 }

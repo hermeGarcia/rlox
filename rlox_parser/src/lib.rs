@@ -1,5 +1,6 @@
 mod error;
 mod expression;
+mod statement;
 mod token_stream;
 
 use error::ParserError;
@@ -85,12 +86,15 @@ pub fn parse(src_id: Source, code: &[u8]) -> Result<Ast, Ast> {
     ctxt.skip_comments();
 
     while !ctxt.is_at_end() {
-        if let Err(error) = expression::parse(&mut ctxt, &mut ast) {
-            is_valid = false;
-            rlox_errors::error(error);
-            panic_mode(&mut ctxt);
+        match statement::parse(&mut ctxt, &mut ast) {
+            Ok(stmt_id) => ast.record_as_root(stmt_id),
+            Err(error) => {
+                is_valid = false;
+                rlox_errors::error(error);
+                panic_mode(&mut ctxt);
 
-            continue;
+                continue;
+            }
         }
 
         if !ctxt.consume_if(TokenKind::Semicolon) {
