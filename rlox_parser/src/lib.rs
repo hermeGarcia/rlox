@@ -78,44 +78,67 @@ fn panic_mode(ctxt: &mut Context) {
     }
 }
 
+enum AstStatus {
+    Complete,
+    Incomplete,
+}
+
+pub struct AstWithStatus {
+    status: AstStatus,
+    inner: Ast,
+}
+
+impl Default for AstWithStatus {
+    fn default() -> Self {
+        AstWithStatus {
+            status: AstStatus::Complete,
+            inner: Ast::default(),
+        }
+    }
+}
+
+impl AsRef<Ast> for AstWithStatus {
+    fn as_ref(&self) -> &Ast {
+        &self.inner
+    }
+}
+
+impl AsMut<Ast> for AstWithStatus {
+    fn as_mut(&mut self) -> &mut Ast {
+        &mut self.inner
+    }
+}
+
+impl From<AstWithStatus> for Result<Ast, Ast> {
+    fn from(value: AstWithStatus) -> Self {
+        match value.status {
+            AstStatus::Complete => Ok(value.inner),
+            AstStatus::Incomplete => Err(value.inner),
+        }
+    }
+}
+
 pub fn parse(src_id: Source, code: &[u8]) -> Result<Ast, Ast> {
-    let mut is_valid = true;
-    let mut ast = Ast::default();
+    let mut ast = AstWithStatus::default();
     let mut ctxt = Context::new(src_id, code);
 
     ctxt.skip_comments();
 
     while !ctxt.is_at_end() {
-        match statement::parse(&mut ctxt, &mut ast) {
-            Ok(stmt_id) => ast.record_as_root(stmt_id),
+        match statement::parse(&mut ctxt, ast.as_mut()) {
+            Ok(stmt_id) => {
+                ast.as_mut().push_into_initial_block(stmt_id);
+                ctxt.skip_comments();
+            }
             Err(error) => {
-                is_valid = false;
+                ast.status = AstStatus::Incomplete;
                 rlox_errors::error(error);
                 panic_mode(&mut ctxt);
 
                 continue;
             }
         }
-
-        if !ctxt.consume_if(TokenKind::Semicolon) {
-            rlox_errors::error(ParserError::from(error::UnexpectedToken {
-                start: ctxt.peek().start,
-                end: ctxt.peek().end,
-                line: ctxt.peek().line,
-                source: ctxt.src_id,
-                expected: vec![TokenKind::Semicolon],
-            }));
-
-            panic_mode(&mut ctxt);
-            is_valid = false;
-        }
-
-        ctxt.skip_comments();
     }
 
-    if is_valid {
-        Ok(ast)
-    } else {
-        Err(ast)
-    }
+    Result::from(ast)
 }

@@ -80,7 +80,7 @@ impl<Elem, Index: AstIndex> AstVec<Elem, Index> {
 
 #[derive(Default)]
 pub struct Ast {
-    roots: Vec<StmtId>,
+    initial_block: Vec<StmtId>,
     exprs: AstVec<Expr, ExprId>,
     expr_metadata: AstVec<Option<SourceMetadata>, ExprId>,
     stmts: AstVec<Stmt, StmtId>,
@@ -182,11 +182,11 @@ impl AstProperty<SourceMetadata, StmtId> for Ast {
 }
 
 impl Ast {
-    pub fn record_as_root(&mut self, stmt_id: StmtId) {
-        self.roots.push(stmt_id);
+    pub fn push_into_initial_block(&mut self, stmt_id: StmtId) {
+        self.initial_block.push(stmt_id);
     }
 
-    pub fn roots(&self) -> &[StmtId] {
-        &self.roots
+    pub fn initial_block(&self) -> &[StmtId] {
+        &self.initial_block
     }
 }

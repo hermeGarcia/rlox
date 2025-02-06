@@ -52,10 +52,17 @@ fn prompt_mode() -> ! {
 }
 
 fn compile(src_id: Source, code: &str, library: &SourceLibrary) -> ExitCode {
-    let Ok(_ast) = rlox_parser::parse(src_id, code.as_bytes()) else {
+    let Ok(ast) = rlox_parser::parse(src_id, code.as_bytes()) else {
         rlox_errors::report(library);
         return ExitCode::FAILURE;
     };
+
+    let Ok(value) = rlox_interpreter::eval(&ast) else {
+        rlox_errors::report(library);
+        return ExitCode::FAILURE;
+    };
+
+    println!("{value}");
 
     ExitCode::SUCCESS
 }

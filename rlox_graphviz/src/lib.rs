@@ -6,7 +6,7 @@ use std::io::{BufWriter, Result, Write};
 pub fn graph<W: Write>(ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     writeln!(writer, "digraph {{")?;
 
-    for root in ast.roots().iter().copied() {
+    for root in ast.initial_block().iter().copied() {
         match &ast[root] {
             Stmt::Expr(id) => expression::graph(*id, ast, writer)?,
         }
