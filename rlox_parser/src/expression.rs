@@ -40,7 +40,6 @@ fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
-            line_start: lhs_metadata.line_start,
             source: ctxt.src_id,
         });
     }
@@ -76,7 +75,6 @@ fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
-            line_start: lhs_metadata.line_start,
             source: ctxt.src_id,
         });
     }
@@ -110,7 +108,6 @@ fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
-            line_start: lhs_metadata.line_start,
             source: ctxt.src_id,
         });
     }
@@ -144,7 +141,6 @@ fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
-            line_start: lhs_metadata.line_start,
             source: ctxt.src_id,
         });
     }
@@ -178,7 +174,6 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     ast.attach(unary, SourceMetadata {
         start: first_token.start,
         end: operand_metadata.end,
-        line_start: first_token.line,
         source: ctxt.src_id,
     });
 
@@ -198,7 +193,6 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         _ => Err(Into::into(error::UnexpectedToken {
             start: token.start,
             end: token.end,
-            line: token.line,
             source: ctxt.src_id,
             expected: vec![
                 TokenKind::False,
@@ -215,7 +209,6 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     ast.attach(primary_id, SourceMetadata {
         start: token.start,
         end: ctxt.peek().start,
-        line_start: token.line,
         source: ctxt.src_id,
     });
 
@@ -231,7 +224,6 @@ fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> 
         return Err(Into::into(error::UnexpectedToken {
             start: ctxt.peek().start,
             end: ctxt.peek().end,
-            line: ctxt.peek().line,
             source: ctxt.src_id,
             expected: vec![TokenKind::RightParen],
         }));
@@ -245,7 +237,6 @@ fn primitive_type<T: std::str::FromStr>(ctxt: &Context, token: Token) -> ParserR
         Into::into(error::TypeCouldNotBeParsed {
             start: token.start,
             end: token.end,
-            line: token.line,
             source: ctxt.src_id,
         })
     })
@@ -301,7 +292,6 @@ mod tests {
 
         let metadata: &SourceMetadata = ast.get(expr_id);
         assert_eq!(metadata.source, Source::Prompt);
-        assert_eq!(metadata.line_start, 0);
         assert_eq!(&source[metadata.start..metadata.end], source);
     }
 
@@ -319,7 +309,6 @@ mod tests {
 
         let metadata: &SourceMetadata = ast.get(expr_id);
         assert_eq!(metadata.source, Source::Prompt);
-        assert_eq!(metadata.line_start, 0);
         assert_eq!(&source[metadata.start..metadata.end], source);
     }
 }

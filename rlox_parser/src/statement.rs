@@ -21,7 +21,6 @@ pub fn stmt_expr(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
         return Err(Into::into(error::UnexpectedToken {
             start: ctxt.peek().start,
             end: ctxt.peek().end,
-            line: ctxt.peek().line,
             source: ctxt.src_id,
             expected: vec![TokenKind::Semicolon],
         }));

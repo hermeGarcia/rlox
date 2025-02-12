@@ -44,7 +44,6 @@ fn binary(binary: DataWithId<&Binary>, ast: &Ast) -> RuntimeResult<Value> {
         return Err(From::from(OperationNotDefined {
             start: metadata.start,
             end: metadata.end,
-            line: metadata.line_start,
             source: metadata.source,
         }));
     };
@@ -82,7 +81,6 @@ fn unary(unary: DataWithId<&Unary>, ast: &Ast) -> RuntimeResult<Value> {
         return Err(From::from(OperationNotDefined {
             start: metadata.start,
             end: metadata.end,
-            line: metadata.line_start,
             source: metadata.source,
         }));
     };

@@ -18,7 +18,6 @@ impl From<RuntimeError> for Error {
 pub struct OperationNotDefined {
     pub(crate) start: usize,
     pub(crate) end: usize,
-    pub(crate) line: usize,
     pub(crate) source: Source,
 }
 
@@ -37,7 +36,6 @@ impl Message for OperationNotDefined {
         SourceMetadata {
             start: self.start,
             end: self.end,
-            line_start: self.line,
             source: self.source,
         }
     }

@@ -2,7 +2,6 @@
 pub struct SourceMetadata {
     pub start: usize,
     pub end: usize,
-    pub line_start: usize,
     pub source: Source,
 }
 

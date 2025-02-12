@@ -4,14 +4,13 @@ macro_rules! token {
             kind: $kind,
             start: $self.current,
             end: $self.current + $offset,
-            line: $self.line_number,
         }
     };
 }
 
 /// States of the number recognition automata (NRA).
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-enum NRAState {
+enum NraState {
     /// The integer part of a number is being parsed.
     State0,
     /// The integer part of a number was parsed and a dot was found.
@@ -27,8 +26,6 @@ pub struct Token {
     pub start: usize,
     /// End of the token in the source file.
     pub end: usize,
-    /// Line where the token starts.
-    pub line: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -79,7 +76,6 @@ pub enum TokenKind {
 
 pub struct TokenStream<'a> {
     src: &'a [u8],
-    line_number: usize,
     current: usize,
 }
 
@@ -101,16 +97,11 @@ impl TokenStream<'_> {
         TokenStream {
             src,
             current: 0,
-            line_number: 0,
         }
     }
 
     pub fn next_token(&mut self) -> Token {
         while self.current().as_ref().is_some_and(u8::is_ascii_whitespace) {
-            if let Some(b'\n') = self.current() {
-                self.line_number += 1;
-            }
-
             self.current += 1;
         }
 
@@ -126,7 +117,6 @@ impl TokenStream<'_> {
                 kind: TokenKind::Eof,
                 start: self.current,
                 end: self.current,
-                line: self.line_number,
             };
         };
 
@@ -183,9 +173,7 @@ impl TokenStream<'_> {
             comment_offset = offset + 1;
 
             if i == b'\n' {
-                let token = token!(TokenKind::Comment, self, comment_offset);
-                self.line_number += 1;
-                return token;
+                return token!(TokenKind::Comment, self, comment_offset);
             }
         }
 
@@ -207,12 +195,12 @@ impl TokenStream<'_> {
     fn number(&self) -> Token {
         let src_tail = &self.src[self.current..];
         let mut offset = 0;
-        let mut state = NRAState::State0;
+        let mut state = NraState::State0;
 
         loop {
             match src_tail.get(offset).copied() {
-                Some(b'.') if state == NRAState::State0 => state = NRAState::State1,
-                Some(t) if t.is_ascii_digit() && state == NRAState::State1 => state = NRAState::State2,
+                Some(b'.') if state == NraState::State0 => state = NraState::State1,
+                Some(t) if t.is_ascii_digit() && state == NraState::State1 => state = NraState::State2,
                 Some(t) if t.is_ascii_digit() => (),
                 _ => break,
             }
@@ -221,9 +209,9 @@ impl TokenStream<'_> {
         }
 
         match state {
-            NRAState::State0 => token!(TokenKind::Integer, self, offset),
-            NRAState::State1 => token!(TokenKind::Integer, self, offset - 1),
-            NRAState::State2 => token!(TokenKind::Decimal, self, offset),
+            NraState::State0 => token!(TokenKind::Integer, self, offset),
+            NraState::State1 => token!(TokenKind::Integer, self, offset - 1),
+            NraState::State2 => token!(TokenKind::Decimal, self, offset),
         }
     }
 
@@ -236,11 +224,7 @@ impl TokenStream<'_> {
             offset += 1;
         }
 
-        let token_kind = KEYWORDS
-            .iter()
-            .find(|(key, _)| *key == &src_tail[..offset])
-            .map(|kw| kw.1)
-            .unwrap_or(TokenKind::Identifier);
+        let token_kind = keywords(&src_tail[..offset]).unwrap_or(TokenKind::Identifier);
 
         token!(token_kind, self, offset)
     }
@@ -257,24 +241,28 @@ impl TokenStream<'_> {
     }
 }
 
-const KEYWORDS: [(&[u8], TokenKind); 16] = [
-    (b"and", TokenKind::And),
-    (b"class", TokenKind::Class),
-    (b"else", TokenKind::Else),
-    (b"false", TokenKind::False),
-    (b"for", TokenKind::For),
-    (b"fun", TokenKind::Fun),
-    (b"if", TokenKind::If),
-    (b"nil", TokenKind::Nil),
-    (b"or", TokenKind::Or),
-    (b"print", TokenKind::Print),
-    (b"return", TokenKind::Return),
-    (b"super", TokenKind::Super),
-    (b"this", TokenKind::This),
-    (b"true", TokenKind::True),
-    (b"var", TokenKind::Var),
-    (b"while", TokenKind::While),
-];
+#[inline]
+fn keywords(text: &[u8]) -> Option<TokenKind> {
+    match text {
+        b"and" => Some(TokenKind::And),
+        b"class" => Some(TokenKind::Class),
+        b"else" => Some(TokenKind::Else),
+        b"false" => Some(TokenKind::False),
+        b"for" => Some(TokenKind::For),
+        b"fun" => Some(TokenKind::Fun),
+        b"if" => Some(TokenKind::If),
+        b"nil" => Some(TokenKind::Nil),
+        b"or" => Some(TokenKind::Or),
+        b"print" => Some(TokenKind::Print),
+        b"return" => Some(TokenKind::Return),
+        b"super" => Some(TokenKind::Super),
+        b"this" => Some(TokenKind::This),
+        b"true" => Some(TokenKind::True),
+        b"var" => Some(TokenKind::Var),
+        b"while" => Some(TokenKind::While),
+        _ => None,
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -331,14 +319,12 @@ mod tests {
 
         assert_eq!(token.kind, kind);
         assert_eq!(&source[token.start..token.end], source);
-        assert_eq!(token.line, 0);
 
         let token = stream.next_token();
 
         assert_eq!(token.kind, TokenKind::Eof);
         assert_eq!(token.start, source.len());
         assert_eq!(token.end, source.len());
-        assert_eq!(token.line, 0);
     }
 
     #[test]
@@ -355,41 +341,33 @@ mod tests {
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::Comment);
         assert_eq!(&source[token.start..token.end], "// This is a comment\n");
-        assert_eq!(token.line, 1);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::If);
         assert_eq!(&source[token.start..token.end], "if");
-        assert_eq!(token.line, 2);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::True);
         assert_eq!(&source[token.start..token.end], "true");
-        assert_eq!(token.line, 2);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::LeftBrace);
         assert_eq!(&source[token.start..token.end], "{");
-        assert_eq!(token.line, 2);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::Comment);
         assert_eq!(&source[token.start..token.end], "// This is also a comment\n");
-        assert_eq!(token.line, 3);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::RightBrace);
         assert_eq!(&source[token.start..token.end], "}");
-        assert_eq!(token.line, 4);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::Comment);
         assert_eq!(&source[token.start..token.end], "// This is my final comment");
-        assert_eq!(token.line, 5);
 
         let token = stream.next_token();
         assert_eq!(token.kind, TokenKind::Eof);
         assert_eq!(source.len(), token.start);
-        assert_eq!(token.line, 5);
     }
 }

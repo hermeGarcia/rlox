@@ -24,7 +24,6 @@ impl From<ParserError> for Error {
 pub struct UnknownToken {
     pub(crate) start: usize,
     pub(crate) end: usize,
-    pub(crate) line: usize,
     pub(crate) source: Source,
 }
 
@@ -43,7 +42,6 @@ impl Message for UnknownToken {
         SourceMetadata {
             start: self.start,
             end: self.end,
-            line_start: self.line,
             source: self.source,
         }
     }
@@ -53,7 +51,6 @@ impl Message for UnknownToken {
 pub struct TypeCouldNotBeParsed {
     pub(crate) start: usize,
     pub(crate) end: usize,
-    pub(crate) line: usize,
     pub(crate) source: Source,
 }
 
@@ -72,7 +69,6 @@ impl Message for TypeCouldNotBeParsed {
         SourceMetadata {
             start: self.start,
             end: self.end,
-            line_start: self.line,
             source: self.source,
         }
     }
@@ -82,7 +78,6 @@ impl Message for TypeCouldNotBeParsed {
 pub struct UnexpectedToken {
     pub(crate) start: usize,
     pub(crate) end: usize,
-    pub(crate) line: usize,
     pub(crate) source: Source,
     pub(crate) expected: Vec<TokenKind>,
 }
@@ -102,7 +97,6 @@ impl Message for UnexpectedToken {
         SourceMetadata {
             start: self.start,
             end: self.end,
-            line_start: self.line,
             source: self.source,
         }
     }

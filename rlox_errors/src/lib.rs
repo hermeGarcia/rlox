@@ -72,7 +72,7 @@ where
 
     let data_as_bytes = source.data.as_bytes();
     let relevant_part = String::from_utf8_lossy(&data_as_bytes[metadata.start..metadata.end]);
-    let mut line_offset = metadata.line_start + 1;
+    let mut line_offset = 1 + data_as_bytes[..metadata.start].iter().filter(|&&b| b == b'\n').count();
 
     for line in relevant_part.lines() {
         writeln!(stdout, "  {line_offset}| {line}").unwrap();
@@ -83,11 +83,14 @@ where
 
 #[macro_export]
 macro_rules! compiler_log {
-    ($msg:expr) => {{
-        use std::io::{Write, stdout};
-        let msg = format!($msg);
-        let mut std_error = stdout();
-        core::writeln!(std_error, "[LOG] {msg}").expect("Can not report");
-        std_error.flush().expect("Can not flush");
-    }};
+    ($msg:expr) => {
+        #[cfg(debug_assertions)]
+        {
+            use std::io::{Write, stdout};
+            let msg = format!($msg);
+            let mut std_error = stdout();
+            core::writeln!(std_error, "[LOG] {msg}").expect("Can not report");
+            std_error.flush().expect("Can not flush");
+        }
+    };
 }
