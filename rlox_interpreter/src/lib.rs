@@ -12,18 +12,20 @@ type RuntimeResult<T> = Result<T, error::RuntimeError>;
 #[derive(Debug, Clone, Copy)]
 pub struct RuntimeFailure;
 
-pub fn eval(ast: &Ast) -> Result<Value, RuntimeFailure> {
-    let mut result = Value::Nil;
+#[derive(Debug, Clone, Copy)]
+pub struct EvalReport;
+
+struct EvalCtxt;
+
+pub fn eval(ast: &Ast) -> Result<EvalReport, RuntimeFailure> {
+    let mut ctxt = EvalCtxt;
 
     for stmt in ast.initial_block().iter().copied() {
-        match statement::eval(stmt, ast) {
-            Ok(value) => result = value,
-            Err(error) => {
-                rlox_errors::error(error);
-                return Err(RuntimeFailure);
-            }
+        if let Err(error) = statement::eval(stmt, ast, &mut ctxt) {
+            rlox_errors::error(error);
+            return Err(RuntimeFailure);
         }
     }
 
-    Ok(result)
+    Ok(EvalReport)
 }

@@ -1,3 +1,5 @@
+#[cfg(debug_assertions)]
+pub mod debug_utils;
 pub mod expr;
 pub mod stmt;
 

@@ -2,8 +2,8 @@ use crate::ExprId;
 
 #[derive(Clone, Debug)]
 pub enum Expr {
-    BinaryExpr(Binary),
-    UnaryExpr(Unary),
+    Binary(Binary),
+    Unary(Unary),
     Natural(u64),
     Decimal(f64),
     Boolean(bool),

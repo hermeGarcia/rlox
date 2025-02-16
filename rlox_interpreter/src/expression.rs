@@ -1,6 +1,7 @@
 use rlox_ast::expr::{Binary, BinaryOperator, Unary, UnaryOperator};
 use rlox_ast::{Ast, AstProperty, Expr, ExprId};
 
+use crate::EvalCtxt;
 use crate::RuntimeResult;
 use crate::error::OperationNotDefined;
 use crate::value_system::{self, Value, VsResult};
@@ -20,14 +21,14 @@ impl<Data> DataWithId<Data> {
     }
 }
 
-pub fn eval(expr: ExprId, ast: &Ast) -> RuntimeResult<Value> {
-    expression(expr, ast)
+pub fn eval(expr: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
+    expression(expr, ast, ctxt)
 }
 
-fn expression(expr: ExprId, ast: &Ast) -> RuntimeResult<Value> {
+fn expression(expr: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
     match &ast[expr] {
-        Expr::BinaryExpr(inner) => binary(DataWithId::new(expr, inner), ast),
-        Expr::UnaryExpr(inner) => unary(DataWithId::new(expr, inner), ast),
+        Expr::Binary(inner) => binary(DataWithId::new(expr, inner), ast, ctxt),
+        Expr::Unary(inner) => unary(DataWithId::new(expr, inner), ast, ctxt),
         Expr::Nil => Ok(Value::Nil),
         Expr::Boolean(inner) => Ok(Value::Boolean(*inner)),
         Expr::Decimal(inner) => Ok(Value::Decimal(*inner)),
@@ -35,9 +36,9 @@ fn expression(expr: ExprId, ast: &Ast) -> RuntimeResult<Value> {
     }
 }
 
-fn binary(binary: DataWithId<&Binary>, ast: &Ast) -> RuntimeResult<Value> {
-    let lhs = expression(binary.data.lhs, ast)?;
-    let rhs = expression(binary.data.rhs, ast)?;
+fn binary(binary: DataWithId<&Binary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
+    let lhs = expression(binary.data.lhs, ast, ctxt)?;
+    let rhs = expression(binary.data.rhs, ast, ctxt)?;
 
     let Ok(result) = apply_binary_operator(binary.data.operator, lhs, rhs) else {
         let metadata = *ast.get(binary.my_id);
@@ -73,8 +74,8 @@ fn apply_unary_operator(operator: UnaryOperator, operand: Value) -> VsResult<Val
     }
 }
 
-fn unary(unary: DataWithId<&Unary>, ast: &Ast) -> RuntimeResult<Value> {
-    let operand = expression(unary.data.operand, ast)?;
+fn unary(unary: DataWithId<&Unary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
+    let operand = expression(unary.data.operand, ast, ctxt)?;
 
     let Ok(result) = apply_unary_operator(unary.data.operator, operand) else {
         let metadata = *ast.get(unary.my_id);

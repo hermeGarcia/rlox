@@ -2,31 +2,18 @@ use rlox_ast::expr::{Binary, Unary};
 use rlox_ast::{Ast, Expr, ExprId};
 use std::io::{BufWriter, Result, Write};
 
-#[derive(Clone, Copy)]
-struct DataWithId<Data> {
-    my_id: ExprId,
-    data: Data,
-}
+use crate::DataWithId;
 
-impl<Data> DataWithId<Data> {
-    pub fn new(my_id: ExprId, data: Data) -> DataWithId<Data> {
-        DataWithId {
-            my_id,
-            data,
-        }
-    }
-}
-
-type Writer<W> = W;
+type ExprWithId<Data> = DataWithId<ExprId, Data>;
 
 pub fn graph<W: Write>(expr: ExprId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     expression(expr, ast, writer)
 }
 
-fn expression<W: Write>(expr: ExprId, ast: &Ast, writer: &mut Writer<W>) -> Result<()> {
+fn expression<W: Write>(expr: ExprId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     match &ast[expr] {
-        Expr::BinaryExpr(data) => binary(DataWithId::new(expr, data), ast, writer),
-        Expr::UnaryExpr(data) => unary(DataWithId::new(expr, data), ast, writer),
+        Expr::Binary(data) => binary(DataWithId::new(expr, data), ast, writer),
+        Expr::Unary(data) => unary(DataWithId::new(expr, data), ast, writer),
         Expr::Boolean(data) => writeln!(writer, "\"{expr:?}\" [label=\"{data}\"]",),
         Expr::Natural(data) => writeln!(writer, "\"{expr:?}\" [label=\"{data}\"]",),
         Expr::Decimal(data) => writeln!(writer, "\"{expr:?}\" [label=\"{data}\"]",),
@@ -34,7 +21,7 @@ fn expression<W: Write>(expr: ExprId, ast: &Ast, writer: &mut Writer<W>) -> Resu
     }
 }
 
-fn binary<W: Write>(binary: DataWithId<&Binary>, ast: &Ast, writer: &mut Writer<W>) -> Result<()> {
+fn binary<W: Write>(binary: ExprWithId<&Binary>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     let data = binary.data;
 
     writeln!(writer, "\"{:?}\" [label=\"{:?}\"]", binary.my_id, data.operator)?;
@@ -47,7 +34,7 @@ fn binary<W: Write>(binary: DataWithId<&Binary>, ast: &Ast, writer: &mut Writer<
     Ok(())
 }
 
-fn unary<W: Write>(binary: DataWithId<&Unary>, ast: &Ast, writer: &mut Writer<W>) -> Result<()> {
+fn unary<W: Write>(binary: ExprWithId<&Unary>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     let data = binary.data;
 
     writeln!(writer, "\"{:?}\" [label=\"{:?}\"]", binary.my_id, data.operator)?;

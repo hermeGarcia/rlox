@@ -35,7 +35,7 @@ fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::BinaryExpr(binary_expr));
+        expr = ast.add(Expr::Binary(binary_expr));
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -70,7 +70,7 @@ fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::BinaryExpr(binary_expr));
+        expr = ast.add(Expr::Binary(binary_expr));
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -103,7 +103,7 @@ fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::BinaryExpr(binary_expr));
+        expr = ast.add(Expr::Binary(binary_expr));
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -136,7 +136,7 @@ fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::BinaryExpr(binary_expr));
+        expr = ast.add(Expr::Binary(binary_expr));
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -169,7 +169,7 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     };
 
     let operand_metadata = *ast.get(unary_expr.operand);
-    let unary = ast.add(Expr::UnaryExpr(unary_expr));
+    let unary = ast.add(Expr::Unary(unary_expr));
 
     ast.attach(unary, SourceMetadata {
         start: first_token.start,
@@ -257,27 +257,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use expr::*;
-    use rlox_source::Source;
-    use test_case::test_case;
-
     use super::*;
 
-    fn debug_fmt(expr_id: ExprId, ast: &Ast) -> String {
-        match &ast[expr_id] {
-            Expr::BinaryExpr(binary) => {
-                let lhs = debug_fmt(binary.lhs, ast);
-                let rhs = debug_fmt(binary.rhs, ast);
-                format!("{:?}({lhs}, {rhs})", binary.operator)
-            }
-            Expr::UnaryExpr(unary) => {
-                let operand = debug_fmt(unary.operand, ast);
-                format!("{:?}({operand})", unary.operator)
-            }
-
-            other => format!("{other:?}"),
-        }
-    }
+    use rlox_ast::debug_utils::fmt_expr;
+    use rlox_ast::expr::*;
+    use rlox_source::Source;
+    use test_case::test_case;
 
     #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, Expr::Natural(12), Expr::Natural(2)))]
     #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, Expr::Natural(2)))]
@@ -288,7 +273,7 @@ mod tests {
         let mut ast = Ast::default();
         let expr_id = parse(&mut ctxt, &mut ast).unwrap();
 
-        assert_eq!(&debug_fmt(expr_id, &ast), expected);
+        assert_eq!(&fmt_expr(expr_id, &ast), expected);
 
         let metadata: &SourceMetadata = ast.get(expr_id);
         assert_eq!(metadata.source, Source::Prompt);

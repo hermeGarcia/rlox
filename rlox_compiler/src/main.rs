@@ -57,12 +57,10 @@ fn compile(src_id: Source, code: &str, library: &SourceLibrary) -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let Ok(value) = rlox_interpreter::eval(&ast) else {
+    let Ok(_eval_report) = rlox_interpreter::eval(&ast) else {
         rlox_errors::report(library);
         return ExitCode::FAILURE;
     };
-
-    println!("{value}");
 
     ExitCode::SUCCESS
 }
