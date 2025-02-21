@@ -1,5 +1,5 @@
 use rlox_ast::expr;
-use rlox_ast::{Ast, AstElem, AstProperty, Expr, ExprId};
+use rlox_ast::{Ast, AstElem, AstProperty, ExprId};
 use rlox_source::SourceMetadata;
 
 use crate::error;
@@ -11,7 +11,38 @@ pub fn parse(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
 }
 
 fn expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
-    equality(ctxt, ast)
+    assign(ctxt, ast)
+}
+
+fn assign_operator(ctxt: &Context) -> Option<()> {
+    match ctxt.peek().kind {
+        TokenKind::Equal => Some(()),
+        _ => None,
+    }
+}
+
+fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+    let mut expr = equality(ctxt, ast)?;
+
+    if match_and_consume(ctxt, assign_operator).is_some() {
+        let assign_expr = expr::Assign {
+            lhs: expr,
+            rhs: equality(ctxt, ast)?,
+        };
+
+        let lhs_metadata: SourceMetadata = *ast.get(assign_expr.lhs);
+        let rhs_metadata: SourceMetadata = *ast.get(assign_expr.rhs);
+
+        expr = ast.add(assign_expr);
+
+        ast.attach(expr, SourceMetadata {
+            start: lhs_metadata.start,
+            end: rhs_metadata.end,
+            source: ctxt.src_id,
+        });
+    }
+
+    Ok(expr)
 }
 
 fn equality_operator(ctxt: &Context) -> Option<expr::BinaryOperator> {
@@ -35,7 +66,7 @@ fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::Binary(binary_expr));
+        expr = ast.add(binary_expr);
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -70,7 +101,7 @@ fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::Binary(binary_expr));
+        expr = ast.add(binary_expr);
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -103,7 +134,7 @@ fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::Binary(binary_expr));
+        expr = ast.add(binary_expr);
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -136,7 +167,7 @@ fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
         let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
 
-        expr = ast.add(Expr::Binary(binary_expr));
+        expr = ast.add(binary_expr);
 
         ast.attach(expr, SourceMetadata {
             start: lhs_metadata.start,
@@ -169,7 +200,7 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     };
 
     let operand_metadata = *ast.get(unary_expr.operand);
-    let unary = ast.add(Expr::Unary(unary_expr));
+    let unary = ast.add(unary_expr);
 
     ast.attach(unary, SourceMetadata {
         start: first_token.start,
@@ -183,12 +214,22 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
 fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     let token = ctxt.peek();
     let primary_id = match token.kind {
-        TokenKind::False => Ok(ast.add(Expr::Boolean(false))),
-        TokenKind::True => Ok(ast.add(Expr::Boolean(true))),
-        TokenKind::Nil => Ok(ast.add(Expr::Nil)),
-        TokenKind::Integer => Ok(ast.add(Expr::Natural(primitive_type(ctxt, token)?))),
-        TokenKind::Decimal => Ok(ast.add(Expr::Decimal(primitive_type(ctxt, token)?))),
+        TokenKind::False => Ok(ast.add(false)),
+
+        TokenKind::True => Ok(ast.add(true)),
+
+        TokenKind::Nil => Ok(ast.add(expr::Nil)),
+
+        TokenKind::Integer => Ok(ast.add(primitive_type::<u64>(ctxt, token)?)),
+
+        TokenKind::Decimal => Ok(ast.add(primitive_type::<f64>(ctxt, token)?)),
+
         TokenKind::LeftParen => nested_expression(ctxt, ast),
+
+        TokenKind::Identifier => {
+            let identifier = ast.add(identifier(ctxt, token));
+            Ok(ast.add(identifier))
+        }
 
         _ => Err(Into::into(error::UnexpectedToken {
             start: token.start,
@@ -232,7 +273,11 @@ fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> 
     Ok(inner)
 }
 
-fn primitive_type<T: std::str::FromStr>(ctxt: &Context, token: Token) -> ParserResult<T> {
+pub fn identifier(ctxt: &Context, token: Token) -> String {
+    String::from_utf8_lossy(&ctxt.src[token.start..token.end]).to_string()
+}
+
+pub fn primitive_type<T: std::str::FromStr>(ctxt: &Context, token: Token) -> ParserResult<T> {
     String::from_utf8_lossy(&ctxt.src[token.start..token.end]).parse().map_err(|_| {
         Into::into(error::TypeCouldNotBeParsed {
             start: token.start,
@@ -264,6 +309,9 @@ mod tests {
     use rlox_source::Source;
     use test_case::test_case;
 
+    #[test_case(b"var123", "var123")]
+    #[test_case(b"my_var", "my_var")]
+    #[test_case(b"var_a = 3", &format!("Assign(var_a, {:?})", Expr::Natural(3)))]
     #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, Expr::Natural(12), Expr::Natural(2)))]
     #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, Expr::Natural(2)))]
     #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, Expr::Natural(12), Expr::Natural(3)))]
@@ -290,7 +338,7 @@ mod tests {
         let mut ast = Ast::default();
         let expr_id = parse(&mut ctxt, &mut ast).unwrap();
 
-        assert_eq!(format!("{expected:?}"), format!("{:?}", ast[expr_id]));
+        assert_eq!(format!("{expected:?}"), format!("{:?}", expr_id.kind));
 
         let metadata: &SourceMetadata = ast.get(expr_id);
         assert_eq!(metadata.source, Source::Prompt);

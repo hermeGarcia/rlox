@@ -3,14 +3,52 @@ pub mod debug_utils;
 pub mod expr;
 pub mod stmt;
 
-pub use expr::Expr;
-pub use stmt::Stmt;
+pub use expr::{Expr, ExprId};
+pub use stmt::{Stmt, StmtId};
 
 use rlox_source::SourceMetadata;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
 
-pub trait AstElem<Elem, ElemId>: Index<ElemId, Output = Elem> + IndexMut<ElemId> {
+pub type StmtWithId<Data> = DataWithId<StmtId, Data>;
+pub type ExprWithId<Data> = DataWithId<ExprId, Data>;
+
+#[derive(Clone, Copy)]
+pub struct DataWithId<Id, Data> {
+    pub my_id: Id,
+    pub data: Data,
+}
+
+impl<Id, Data> DataWithId<Id, Data> {
+    pub fn new(my_id: Id, data: Data) -> DataWithId<Id, Data> {
+        DataWithId {
+            my_id,
+            data,
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! define_id {
+    ($name:ident) => {
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct $name(usize);
+
+        impl AstIndex for $name {
+            fn inner(&self) -> usize {
+                self.0
+            }
+        }
+
+        impl $name {
+            pub fn new(inner: usize) -> $name {
+                $name(inner)
+            }
+        }
+    };
+}
+
+pub trait AstElem<Elem, ElemId> {
     fn add(&mut self, elem: Elem) -> ElemId;
 }
 
@@ -22,24 +60,6 @@ pub trait AstProperty<Property, ElemId> {
 
 trait AstIndex {
     fn inner(&self) -> usize;
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ExprId(usize);
-
-impl AstIndex for ExprId {
-    fn inner(&self) -> usize {
-        self.0
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct StmtId(usize);
-
-impl AstIndex for StmtId {
-    fn inner(&self) -> usize {
-        self.0
-    }
 }
 
 struct AstVec<T, Index: AstIndex> {
@@ -80,72 +100,60 @@ impl<Elem, Index: AstIndex> AstVec<Elem, Index> {
     }
 }
 
+define_id!(StrId);
+pub(crate) type StrVec = AstVec<String, StrId>;
+
+impl Index<StrId> for Ast {
+    type Output = String;
+
+    fn index(&self, index: StrId) -> &Self::Output {
+        &self.str_buffer[index]
+    }
+}
+
+impl IndexMut<StrId> for Ast {
+    fn index_mut(&mut self, index: StrId) -> &mut Self::Output {
+        &mut self.str_buffer[index]
+    }
+}
+
+impl AstElem<String, StrId> for Ast {
+    fn add(&mut self, elem: String) -> StrId {
+        let id = StrId::new(self.str_buffer.len());
+
+        self.str_buffer.push(elem);
+
+        id
+    }
+}
+
 #[derive(Default)]
 pub struct Ast {
+    stmt_id: usize,
+    expr_id: usize,
+
     initial_block: Vec<StmtId>,
-    exprs: AstVec<Expr, ExprId>,
-    expr_metadata: AstVec<Option<SourceMetadata>, ExprId>,
-    stmts: AstVec<Stmt, StmtId>,
-    stmt_metadata: AstVec<Option<SourceMetadata>, StmtId>,
-}
+    str_buffer: StrVec,
 
-impl Index<ExprId> for Ast {
-    type Output = Expr;
+    // Expression buffers
+    assign_buffer: expr::AssignVec,
+    binary_buffer: expr::BinaryVec,
+    unary_buffer: expr::UnaryVec,
+    expr_metadata_buffer: AstVec<Option<SourceMetadata>, ExprId>,
 
-    fn index(&self, index: ExprId) -> &Self::Output {
-        &self.exprs[index]
-    }
-}
-
-impl Index<StmtId> for Ast {
-    type Output = Stmt;
-
-    fn index(&self, index: StmtId) -> &Self::Output {
-        &self.stmts[index]
-    }
-}
-
-impl IndexMut<ExprId> for Ast {
-    fn index_mut(&mut self, index: ExprId) -> &mut Self::Output {
-        &mut self.exprs[index]
-    }
-}
-
-impl IndexMut<StmtId> for Ast {
-    fn index_mut(&mut self, index: StmtId) -> &mut Self::Output {
-        &mut self.stmts[index]
-    }
-}
-
-impl AstElem<Expr, ExprId> for Ast {
-    fn add(&mut self, elem: Expr) -> ExprId {
-        let expr_id = ExprId(self.exprs.len());
-
-        self.exprs.push(elem);
-        self.expr_metadata.push(None);
-
-        expr_id
-    }
-}
-
-impl AstElem<Stmt, StmtId> for Ast {
-    fn add(&mut self, elem: Stmt) -> StmtId {
-        let stmt_id = StmtId(self.stmts.len());
-
-        self.stmts.push(elem);
-        self.stmt_metadata.push(None);
-
-        stmt_id
-    }
+    // Statement buffers
+    print_buffer: stmt::PrintVec,
+    declaration_buffer: stmt::DeclarationVec,
+    stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
 }
 
 impl AstProperty<SourceMetadata, ExprId> for Ast {
     fn attach(&mut self, id: ExprId, property: SourceMetadata) {
-        self.expr_metadata[id] = Some(property);
+        self.expr_metadata_buffer[id] = Some(property);
     }
 
     fn get(&self, id: ExprId) -> &SourceMetadata {
-        let Some(metadata) = &self.expr_metadata[id] else {
+        let Some(metadata) = &self.expr_metadata_buffer[id] else {
             panic!("{id:?} does not have metadata");
         };
 
@@ -153,7 +161,7 @@ impl AstProperty<SourceMetadata, ExprId> for Ast {
     }
 
     fn get_mut(&mut self, id: ExprId) -> &mut SourceMetadata {
-        let Some(metadata) = &mut self.expr_metadata[id] else {
+        let Some(metadata) = &mut self.expr_metadata_buffer[id] else {
             panic!("{id:?} does not have metadata");
         };
 
@@ -163,11 +171,11 @@ impl AstProperty<SourceMetadata, ExprId> for Ast {
 
 impl AstProperty<SourceMetadata, StmtId> for Ast {
     fn attach(&mut self, id: StmtId, property: SourceMetadata) {
-        self.stmt_metadata[id] = Some(property);
+        self.stmt_metadata_buffer[id] = Some(property);
     }
 
     fn get(&self, id: StmtId) -> &SourceMetadata {
-        let Some(metadata) = &self.stmt_metadata[id] else {
+        let Some(metadata) = &self.stmt_metadata_buffer[id] else {
             panic!("{id:?} does not have metadata");
         };
 
@@ -175,7 +183,7 @@ impl AstProperty<SourceMetadata, StmtId> for Ast {
     }
 
     fn get_mut(&mut self, id: StmtId) -> &mut SourceMetadata {
-        let Some(metadata) = &mut self.stmt_metadata[id] else {
+        let Some(metadata) = &mut self.stmt_metadata_buffer[id] else {
             panic!("{id:?} does not have metadata");
         };
 

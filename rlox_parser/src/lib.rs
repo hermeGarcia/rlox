@@ -78,14 +78,14 @@ fn panic_mode(ctxt: &mut Context) {
     }
 }
 
-enum AstStatus {
+pub enum AstStatus {
     Complete,
     Incomplete,
 }
 
 pub struct AstWithStatus {
-    status: AstStatus,
-    inner: Ast,
+    pub status: AstStatus,
+    pub inner: Ast,
 }
 
 impl Default for AstWithStatus {
@@ -109,16 +109,16 @@ impl AsMut<Ast> for AstWithStatus {
     }
 }
 
-impl From<AstWithStatus> for Result<Ast, Ast> {
+impl From<AstWithStatus> for Result<Ast, Box<Ast>> {
     fn from(value: AstWithStatus) -> Self {
         match value.status {
             AstStatus::Complete => Ok(value.inner),
-            AstStatus::Incomplete => Err(value.inner),
+            AstStatus::Incomplete => Err(Box::new(value.inner)),
         }
     }
 }
 
-pub fn parse(src_id: Source, code: &[u8]) -> Result<Ast, Ast> {
+pub fn parse(src_id: Source, code: &[u8]) -> Result<Ast, Box<Ast>> {
     let mut ast = AstWithStatus::default();
     let mut ctxt = Context::new(src_id, code);
 

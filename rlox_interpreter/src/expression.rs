@@ -1,42 +1,29 @@
 use rlox_ast::expr::{Binary, BinaryOperator, Unary, UnaryOperator};
-use rlox_ast::{Ast, AstProperty, Expr, ExprId};
+use rlox_ast::{Ast, AstProperty, Expr, ExprId, ExprWithId};
 
 use crate::EvalCtxt;
 use crate::RuntimeResult;
 use crate::error::OperationNotDefined;
 use crate::value_system::{self, Value, VsResult};
 
-#[derive(Clone, Copy)]
-struct DataWithId<Data> {
-    my_id: ExprId,
-    data: Data,
-}
-
-impl<Data> DataWithId<Data> {
-    pub fn new(my_id: ExprId, data: Data) -> DataWithId<Data> {
-        DataWithId {
-            my_id,
-            data,
-        }
-    }
-}
-
 pub fn eval(expr: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
     expression(expr, ast, ctxt)
 }
 
 fn expression(expr: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
-    match &ast[expr] {
-        Expr::Binary(inner) => binary(DataWithId::new(expr, inner), ast, ctxt),
-        Expr::Unary(inner) => unary(DataWithId::new(expr, inner), ast, ctxt),
+    match expr.kind {
+        Expr::Binary(inner) => binary(ExprWithId::new(expr, &ast[inner]), ast, ctxt),
+        Expr::Unary(inner) => unary(ExprWithId::new(expr, &ast[inner]), ast, ctxt),
         Expr::Nil => Ok(Value::Nil),
-        Expr::Boolean(inner) => Ok(Value::Boolean(*inner)),
-        Expr::Decimal(inner) => Ok(Value::Decimal(*inner)),
-        Expr::Natural(inner) => Ok(Value::Natural(*inner)),
+        Expr::Boolean(inner) => Ok(Value::Boolean(inner)),
+        Expr::Decimal(inner) => Ok(Value::Decimal(inner)),
+        Expr::Natural(inner) => Ok(Value::Natural(inner)),
+        Expr::Assign(_) => todo!(),
+        Expr::Identifier(_) => todo!(),
     }
 }
 
-fn binary(binary: DataWithId<&Binary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
+fn binary(binary: ExprWithId<&Binary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
     let lhs = expression(binary.data.lhs, ast, ctxt)?;
     let rhs = expression(binary.data.rhs, ast, ctxt)?;
 
@@ -74,7 +61,7 @@ fn apply_unary_operator(operator: UnaryOperator, operand: Value) -> VsResult<Val
     }
 }
 
-fn unary(unary: DataWithId<&Unary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
+fn unary(unary: ExprWithId<&Unary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
     let operand = expression(unary.data.operand, ast, ctxt)?;
 
     let Ok(result) = apply_unary_operator(unary.data.operator, operand) else {

@@ -8,9 +8,10 @@ use crate::expression;
 type StmtResult = RuntimeResult<()>;
 
 pub fn eval(stmt: StmtId, ast: &Ast, ctxt: &mut EvalCtxt) -> StmtResult {
-    match &ast[stmt] {
-        Stmt::Expr(id) => eval_expr_stmt(*id, ast, ctxt),
-        Stmt::Print(inner) => eval_print(inner, ast, ctxt),
+    match stmt.kind {
+        Stmt::Expr(id) => eval_expr_stmt(id, ast, ctxt),
+        Stmt::Print(inner) => eval_print(&ast[inner], ast, ctxt),
+        Stmt::Declaration(_inner) => todo!(),
     }
 }
 

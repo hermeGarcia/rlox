@@ -1,14 +1,14 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Source {
+    Prompt,
+    File(usize),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SourceMetadata {
     pub start: usize,
     pub end: usize,
     pub source: Source,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Source {
-    Prompt,
-    File(usize),
 }
 
 #[derive(Clone)]
