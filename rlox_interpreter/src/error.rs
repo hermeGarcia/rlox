@@ -4,12 +4,16 @@ use rlox_source::{Source, SourceMetadata};
 #[derive(Debug)]
 pub enum RuntimeError {
     OperationNotDefined(OperationNotDefined),
+    VarNotFound(VarNotFound),
+    InvalidAssign(InvalidAssign),
 }
 
 impl From<RuntimeError> for Error {
     fn from(value: RuntimeError) -> Self {
         match value {
+            RuntimeError::VarNotFound(e) => e.into(),
             RuntimeError::OperationNotDefined(e) => e.into(),
+            RuntimeError::InvalidAssign(e) => e.into(),
         }
     }
 }
@@ -30,6 +34,60 @@ impl From<OperationNotDefined> for RuntimeError {
 impl Message for OperationNotDefined {
     fn description(&self) -> String {
         "The operation is not defined".into()
+    }
+
+    fn source_metadata(&self) -> SourceMetadata {
+        SourceMetadata {
+            start: self.start,
+            end: self.end,
+            source: self.source,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct VarNotFound {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) source: Source,
+}
+
+impl From<VarNotFound> for RuntimeError {
+    fn from(value: VarNotFound) -> Self {
+        RuntimeError::VarNotFound(value)
+    }
+}
+
+impl Message for VarNotFound {
+    fn description(&self) -> String {
+        "Variable not found".into()
+    }
+
+    fn source_metadata(&self) -> SourceMetadata {
+        SourceMetadata {
+            start: self.start,
+            end: self.end,
+            source: self.source,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct InvalidAssign {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) source: Source,
+}
+
+impl From<InvalidAssign> for RuntimeError {
+    fn from(value: InvalidAssign) -> Self {
+        RuntimeError::InvalidAssign(value)
+    }
+}
+
+impl Message for InvalidAssign {
+    fn description(&self) -> String {
+        "Assignments need a memory location".to_string()
     }
 
     fn source_metadata(&self) -> SourceMetadata {

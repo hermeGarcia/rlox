@@ -78,14 +78,14 @@ fn panic_mode(ctxt: &mut Context) {
     }
 }
 
-pub enum AstStatus {
+enum AstStatus {
     Complete,
     Incomplete,
 }
 
-pub struct AstWithStatus {
-    pub status: AstStatus,
-    pub inner: Ast,
+struct AstWithStatus {
+    status: AstStatus,
+    inner: Ast,
 }
 
 impl Default for AstWithStatus {
@@ -126,8 +126,8 @@ pub fn parse(src_id: Source, code: &[u8]) -> Result<Ast, Box<Ast>> {
 
     while !ctxt.is_at_end() {
         match statement::parse(&mut ctxt, ast.as_mut()) {
-            Ok(stmt_id) => {
-                ast.as_mut().push_into_initial_block(stmt_id);
+            Ok(stmt) => {
+                ast.as_mut().push_into_initial_block(stmt);
                 ctxt.skip_comments();
             }
             Err(error) => {

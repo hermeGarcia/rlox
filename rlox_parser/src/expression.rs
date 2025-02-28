@@ -1,16 +1,16 @@
 use rlox_ast::expr;
-use rlox_ast::{Ast, AstElem, AstProperty, ExprId};
+use rlox_ast::{Ast, AstElem, AstProperty, Expr};
 use rlox_source::SourceMetadata;
 
 use crate::error;
 use crate::token_stream::{Token, TokenKind};
 use crate::{Context, ParserResult};
 
-pub fn parse(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+pub fn parse(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     expression(ctxt, ast)
 }
 
-fn expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     assign(ctxt, ast)
 }
 
@@ -21,7 +21,7 @@ fn assign_operator(ctxt: &Context) -> Option<()> {
     }
 }
 
-fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = equality(ctxt, ast)?;
 
     if match_and_consume(ctxt, assign_operator).is_some() {
@@ -30,12 +30,12 @@ fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
             rhs: equality(ctxt, ast)?,
         };
 
-        let lhs_metadata: SourceMetadata = *ast.get(assign_expr.lhs);
-        let rhs_metadata: SourceMetadata = *ast.get(assign_expr.rhs);
+        let lhs_metadata: SourceMetadata = *ast.get(assign_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(assign_expr.rhs.global_id());
 
         expr = ast.add(assign_expr);
 
-        ast.attach(expr, SourceMetadata {
+        ast.attach(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -53,7 +53,7 @@ fn equality_operator(ctxt: &Context) -> Option<expr::BinaryOperator> {
     }
 }
 
-fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = comparison(ctxt, ast)?;
 
     while let Some(operator) = match_and_consume(ctxt, equality_operator) {
@@ -63,12 +63,12 @@ fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
             rhs: comparison(ctxt, ast)?,
         };
 
-        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
-        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
+        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs.global_id());
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr, SourceMetadata {
+        ast.attach(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -88,7 +88,7 @@ fn comparison_operator(ctxt: &Context) -> Option<expr::BinaryOperator> {
     }
 }
 
-fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = term(ctxt, ast)?;
 
     while let Some(operator) = match_and_consume(ctxt, comparison_operator) {
@@ -98,12 +98,12 @@ fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
             rhs: term(ctxt, ast)?,
         };
 
-        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
-        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
+        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs.global_id());
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr, SourceMetadata {
+        ast.attach(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -121,7 +121,7 @@ fn term_operator(ctxt: &Context) -> Option<expr::BinaryOperator> {
     }
 }
 
-fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = factor(ctxt, ast)?;
 
     while let Some(operator) = match_and_consume(ctxt, term_operator) {
@@ -131,12 +131,12 @@ fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
             rhs: factor(ctxt, ast)?,
         };
 
-        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
-        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
+        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs.global_id());
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr, SourceMetadata {
+        ast.attach(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -154,7 +154,7 @@ fn factor_operator(ctxt: &Context) -> Option<expr::BinaryOperator> {
     }
 }
 
-fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = unary(ctxt, ast)?;
 
     while let Some(operator) = match_and_consume(ctxt, factor_operator) {
@@ -164,12 +164,12 @@ fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
             rhs: unary(ctxt, ast)?,
         };
 
-        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs);
-        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs);
+        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs.global_id());
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr, SourceMetadata {
+        ast.attach(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -187,7 +187,7 @@ fn unary_operator(ctxt: &Context) -> Option<expr::UnaryOperator> {
     }
 }
 
-fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let first_token = ctxt.peek();
 
     let Some(operator) = match_and_consume(ctxt, unary_operator) else {
@@ -199,10 +199,10 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
         operand: primary(ctxt, ast)?,
     };
 
-    let operand_metadata = *ast.get(unary_expr.operand);
+    let operand_metadata = *ast.get(unary_expr.operand.global_id());
     let unary = ast.add(unary_expr);
 
-    ast.attach(unary, SourceMetadata {
+    ast.attach(unary.global_id(), SourceMetadata {
         start: first_token.start,
         end: operand_metadata.end,
         source: ctxt.src_id,
@@ -211,9 +211,9 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     Ok(unary)
 }
 
-fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let token = ctxt.peek();
-    let primary_id = match token.kind {
+    let primary = match token.kind {
         TokenKind::False => Ok(ast.add(false)),
 
         TokenKind::True => Ok(ast.add(true)),
@@ -247,16 +247,16 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
     }?;
 
     ctxt.consume();
-    ast.attach(primary_id, SourceMetadata {
+    ast.attach(primary.global_id(), SourceMetadata {
         start: token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
     });
 
-    Ok(primary_id)
+    Ok(primary)
 }
 
-fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<ExprId> {
+fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     ctxt.consume();
 
     let inner = expression(ctxt, ast)?;
@@ -311,36 +311,36 @@ mod tests {
 
     #[test_case(b"var123", "var123")]
     #[test_case(b"my_var", "my_var")]
-    #[test_case(b"var_a = 3", &format!("Assign(var_a, {:?})", Expr::Natural(3)))]
-    #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, Expr::Natural(12), Expr::Natural(2)))]
-    #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, Expr::Natural(2)))]
-    #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, Expr::Natural(12), Expr::Natural(3)))]
-    #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, Expr::Natural(12), Expr::Natural(3)))]
+    #[test_case(b"var_a = 3", &format!("Assign(var_a, {:?})", ExprKind::Natural(3)))]
+    #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)))]
+    #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, ExprKind::Natural(2)))]
+    #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)))]
+    #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)))]
     fn composed_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();
-        let expr_id = parse(&mut ctxt, &mut ast).unwrap();
+        let expr = parse(&mut ctxt, &mut ast).unwrap();
 
-        assert_eq!(&fmt_expr(expr_id, &ast), expected);
+        assert_eq!(&fmt_expr(expr, &ast), expected);
 
-        let metadata: &SourceMetadata = ast.get(expr_id);
+        let metadata: &SourceMetadata = ast.get(expr.global_id());
         assert_eq!(metadata.source, Source::Prompt);
         assert_eq!(&source[metadata.start..metadata.end], source);
     }
 
-    #[test_case(b"12.34", Expr::Decimal(12.34))]
-    #[test_case(b"12", Expr::Natural(12))]
-    #[test_case(b"nil", Expr::Nil)]
-    #[test_case(b"true", Expr::Boolean(true))]
-    #[test_case(b"false", Expr::Boolean(false))]
-    fn primary_parsing(source: &[u8], expected: Expr) {
+    #[test_case(b"12.34", ExprKind::Decimal(12.34))]
+    #[test_case(b"12", ExprKind::Natural(12))]
+    #[test_case(b"nil", ExprKind::Nil)]
+    #[test_case(b"true", ExprKind::Boolean(true))]
+    #[test_case(b"false", ExprKind::Boolean(false))]
+    fn primary_parsing(source: &[u8], expected: ExprKind) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();
-        let expr_id = parse(&mut ctxt, &mut ast).unwrap();
+        let expr = parse(&mut ctxt, &mut ast).unwrap();
 
-        assert_eq!(format!("{expected:?}"), format!("{:?}", expr_id.kind));
+        assert_eq!(format!("{expected:?}"), format!("{:?}", expr.kind()));
 
-        let metadata: &SourceMetadata = ast.get(expr_id);
+        let metadata: &SourceMetadata = ast.get(expr.global_id());
         assert_eq!(metadata.source, Source::Prompt);
         assert_eq!(&source[metadata.start..metadata.end], source);
     }

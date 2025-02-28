@@ -1,44 +1,51 @@
-use crate::{Ast, Expr, ExprId, Stmt, StmtId};
+use crate::{Ast, Expr, ExprKind, Stmt, StmtKind};
 
-pub fn fmt_expr(expr_id: ExprId, ast: &Ast) -> String {
-    match expr_id.kind {
-        Expr::Assign(id) => {
+pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
+    match expr.kind() {
+        ExprKind::Assign(id) => {
             let assign = &ast[id];
             let lhs = fmt_expr(assign.lhs, ast);
             let rhs = fmt_expr(assign.rhs, ast);
             format!("Assign({lhs}, {rhs})")
         }
 
-        Expr::Binary(id) => {
+        ExprKind::Binary(id) => {
             let binary = &ast[id];
             let lhs = fmt_expr(binary.lhs, ast);
             let rhs = fmt_expr(binary.rhs, ast);
             format!("{:?}({lhs}, {rhs})", binary.operator)
         }
 
-        Expr::Unary(id) => {
+        ExprKind::Unary(id) => {
             let unary = &ast[id];
             let operand = fmt_expr(unary.operand, ast);
             format!("{:?}({operand})", unary.operator)
         }
 
-        Expr::Identifier(string_id) => ast[string_id].clone(),
+        ExprKind::Identifier(string_id) => ast[string_id].clone(),
 
         other => format!("{other:?}"),
     }
 }
 
-pub fn fmt_stmt(stmt_id: StmtId, ast: &Ast) -> String {
-    match stmt_id.kind {
-        Stmt::Expr(inner) => fmt_expr(inner, ast),
+pub fn fmt_stmt(stmt: Stmt, ast: &Ast) -> String {
+    match stmt.kind() {
+        StmtKind::Expr(inner) => fmt_expr(inner, ast),
 
-        Stmt::Print(id) => {
+        StmtKind::Block(id) => {
+            let block = &ast[id];
+            let inner: Vec<_> = block.stmts.iter().map(|stmt| fmt_stmt(*stmt, ast)).collect();
+
+            format!("Block({inner:?})")
+        }
+
+        StmtKind::Print(id) => {
             let print = &ast[id];
             let operand = fmt_expr(print.expr, ast);
             format!("Print({operand})")
         }
 
-        Stmt::Declaration(id) => {
+        StmtKind::Declaration(id) => {
             let declaration = &ast[id];
             let identifier = &ast[declaration.identifier];
             let value = match declaration.value {

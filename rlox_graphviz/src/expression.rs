@@ -1,46 +1,48 @@
 use rlox_ast::expr::*;
-use rlox_ast::{Ast, Expr, ExprId, ExprWithId, StrId};
+use rlox_ast::{Ast, Expr, StrId};
 use std::io::{BufWriter, Result, Write};
 
-pub fn graph<W: Write>(expr: ExprId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+pub fn graph<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     expression(expr, ast, writer)
 }
 
-fn expression<W: Write>(expr: ExprId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    match expr.kind {
-        Expr::Boolean(inner) => writeln!(writer, "\"{expr:?}\" [label=\"{inner}\"]",),
-        Expr::Natural(inner) => writeln!(writer, "\"{expr:?}\" [label=\"{inner}\"]",),
-        Expr::Decimal(inner) => writeln!(writer, "\"{expr:?}\" [label=\"{inner}\"]",),
-        Expr::Binary(inner) => binary(ExprWithId::new(expr, &ast[inner]), ast, writer),
-        Expr::Unary(inner) => unary(ExprWithId::new(expr, &ast[inner]), ast, writer),
-        Expr::Assign(inner) => assign(ExprWithId::new(expr, &ast[inner]), ast, writer),
-        Expr::Identifier(inner) => identifier(ExprWithId::new(expr, inner), ast, writer),
-        Expr::Nil => writeln!(writer, "\"{expr:?}\" [label=\"nil\"]",),
+fn expression<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+    match expr.kind() {
+        ExprKind::Boolean(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
+        ExprKind::Natural(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
+        ExprKind::Decimal(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
+        ExprKind::Binary(inner) => binary(expr.global_id(), inner, ast, writer),
+        ExprKind::Unary(inner) => unary(expr.global_id(), inner, ast, writer),
+        ExprKind::Assign(inner) => assign(expr.global_id(), inner, ast, writer),
+        ExprKind::Identifier(inner) => identifier(expr.global_id(), inner, ast, writer),
+        ExprKind::Nil => writeln!(writer, "\"{expr:?}\" [label=\"nil\"]",),
     }
 }
 
-fn identifier<W: Write>(expr: ExprWithId<StrId>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    writeln!(writer, "\"{:?}\" [label=\"{}\"]", expr.my_id, ast[expr.data])?;
+fn identifier<W: Write>(expr: ExprId, id: StrId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+    writeln!(writer, "\"{expr:?}\" [label=\"{}\"]", ast[id])?;
     Ok(())
 }
 
-fn assign<W: Write>(expr: ExprWithId<&Assign>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    writeln!(writer, "\"{:?}\" [label=\"Assign\"]", expr.my_id)?;
-    writeln!(writer, "\"{:?}\" -> \"{:?}\"", expr.my_id, expr.data.lhs)?;
-    writeln!(writer, "\"{:?}\" -> \"{:?}\"", expr.my_id, expr.data.rhs)?;
+fn assign<W: Write>(expr: ExprId, id: AssignId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+    let assign = &ast[id];
 
-    expression(expr.data.lhs, ast, writer)?;
-    expression(expr.data.rhs, ast, writer)?;
+    writeln!(writer, "\"{expr:?}\" [label=\"Assign\"]")?;
+    writeln!(writer, "\"{expr:?}\" -> \"{:?}\"", assign.lhs.global_id())?;
+    writeln!(writer, "\"{expr:?}\" -> \"{:?}\"", assign.rhs.global_id())?;
+
+    expression(assign.lhs, ast, writer)?;
+    expression(assign.rhs, ast, writer)?;
 
     Ok(())
 }
 
-fn binary<W: Write>(binary: ExprWithId<&Binary>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    let data = binary.data;
+fn binary<W: Write>(expr: ExprId, id: BinaryId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+    let data = &ast[id];
 
-    writeln!(writer, "\"{:?}\" [label=\"{:?}\"]", binary.my_id, data.operator)?;
-    writeln!(writer, "\"{:?}\" -> \"{:?}\"", binary.my_id, data.lhs)?;
-    writeln!(writer, "\"{:?}\" -> \"{:?}\"", binary.my_id, data.rhs)?;
+    writeln!(writer, "\"{expr:?}\" [label=\"{:?}\"]", data.operator)?;
+    writeln!(writer, "\"{expr:?}\" -> \"{:?}\"", data.lhs.global_id())?;
+    writeln!(writer, "\"{expr:?}\" -> \"{:?}\"", data.rhs.global_id())?;
 
     expression(data.lhs, ast, writer)?;
     expression(data.rhs, ast, writer)?;
@@ -48,11 +50,11 @@ fn binary<W: Write>(binary: ExprWithId<&Binary>, ast: &Ast, writer: &mut BufWrit
     Ok(())
 }
 
-fn unary<W: Write>(binary: ExprWithId<&Unary>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    let data = binary.data;
+fn unary<W: Write>(expr: ExprId, id: UnaryId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+    let data = &ast[id];
 
-    writeln!(writer, "\"{:?}\" [label=\"{:?}\"]", binary.my_id, data.operator)?;
-    writeln!(writer, "\"{:?}\" -> \"{:?}\"", binary.my_id, data.operand)?;
+    writeln!(writer, "\"{expr:?}\" [label=\"{:?}\"]", data.operator)?;
+    writeln!(writer, "\"{expr:?}\" -> \"{:?}\"", data.operand.global_id())?;
 
     expression(data.operand, ast, writer)?;
 

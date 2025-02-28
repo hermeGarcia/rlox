@@ -1,0 +1,9 @@
+
+var x = 123;
+print x == 9227465;
+print x;
+x = x*2;
+print x;
+
+var a123;
+print a123;

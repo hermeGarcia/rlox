@@ -1,3 +1,5 @@
+use crate::runtime::MemAddr;
+
 pub type VsResult<T> = Result<T, OperationNotDefined>;
 
 #[derive(Debug, Clone, Copy)]
@@ -7,6 +9,7 @@ pub enum Value {
     Decimal(f64),
     Natural(u64),
     Signed(i64),
+    Addr(MemAddr),
 }
 
 impl std::fmt::Display for Value {
@@ -17,6 +20,7 @@ impl std::fmt::Display for Value {
             Value::Decimal(inner) => inner.fmt(f),
             Value::Natural(inner) => inner.fmt(f),
             Value::Signed(inner) => inner.fmt(f),
+            Value::Addr(inner) => inner.fmt(f),
         }
     }
 }

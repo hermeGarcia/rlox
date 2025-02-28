@@ -1,11 +1,14 @@
+pub mod value_system;
+
 mod error;
 mod expression;
+mod runtime;
 mod statement;
-pub mod value_system;
 
 pub use value_system::Value;
 
 use rlox_ast::Ast;
+use runtime::Runtime;
 
 type RuntimeResult<T> = Result<T, error::RuntimeError>;
 
@@ -15,13 +18,11 @@ pub struct RuntimeFailure;
 #[derive(Debug, Clone, Copy)]
 pub struct EvalReport;
 
-struct EvalCtxt;
-
 pub fn eval(ast: &Ast) -> Result<EvalReport, RuntimeFailure> {
-    let mut ctxt = EvalCtxt;
+    let mut runtime = Runtime::new();
 
     for stmt in ast.initial_block().iter().copied() {
-        if let Err(error) = statement::eval(stmt, ast, &mut ctxt) {
+        if let Err(error) = statement::eval(stmt, ast, &mut runtime) {
             rlox_errors::error(error);
             return Err(RuntimeFailure);
         }

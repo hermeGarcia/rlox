@@ -1,5 +1,5 @@
 use rlox_ast::stmt;
-use rlox_ast::{Ast, AstElem, AstProperty, StmtId};
+use rlox_ast::{Ast, AstElem, AstProperty, Stmt};
 use rlox_source::SourceMetadata;
 
 use crate::error;
@@ -7,19 +7,20 @@ use crate::expression;
 use crate::token_stream::TokenKind;
 use crate::{Context, ParserResult};
 
-pub fn parse(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
+pub fn parse(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     stmt(ctxt, ast)
 }
 
-fn stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
+fn stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     match ctxt.peek().kind {
         TokenKind::Var => var_stmt(ctxt, ast),
         TokenKind::Print => print_stmt(ctxt, ast),
+        TokenKind::LeftBrace => block_stmt(ctxt, ast),
         _ => expr_stmt(ctxt, ast),
     }
 }
 
-fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
+fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     let start_token = ctxt.consume();
 
     let identifier = match ctxt.peek().kind {
@@ -53,24 +54,24 @@ fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
         }));
     }
 
-    let stmt_id = ast.add(stmt::Declaration {
+    let stmt = ast.add(stmt::Declaration {
         identifier,
         value,
     });
 
-    ast.attach(stmt_id, SourceMetadata {
+    ast.attach(stmt.global_id(), SourceMetadata {
         start: start_token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
     });
 
-    Ok(stmt_id)
+    Ok(stmt)
 }
 
-fn print_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
+fn print_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     let start_token = ctxt.consume();
 
-    let stmt = stmt::Print {
+    let print_stmt = stmt::Print {
         expr: expression::parse(ctxt, ast)?,
     };
 
@@ -83,19 +84,19 @@ fn print_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
         }));
     }
 
-    let stmt_id: StmtId = ast.add(stmt);
+    let stmt = ast.add(print_stmt);
 
-    ast.attach(stmt_id, SourceMetadata {
+    ast.attach(stmt.global_id(), SourceMetadata {
         start: start_token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
     });
 
-    Ok(stmt_id)
+    Ok(stmt)
 }
 
-fn expr_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
-    let expr_id = expression::parse(ctxt, ast)?;
+fn expr_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
+    let expr = expression::parse(ctxt, ast)?;
 
     if !ctxt.consume_if(TokenKind::Semicolon) {
         return Err(Into::into(error::UnexpectedToken {
@@ -106,14 +107,46 @@ fn expr_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<StmtId> {
         }));
     }
 
-    let stmt_id = ast.add(expr_id);
+    let stmt = ast.add(expr);
 
-    ast.attach(stmt_id, SourceMetadata {
+    ast.attach(stmt.global_id(), SourceMetadata {
         end: ctxt.peek().start,
-        ..*ast.get(expr_id)
+        ..*ast.get(expr.global_id())
     });
 
-    Ok(stmt_id)
+    Ok(stmt)
+}
+
+fn block_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
+    let start_token = ctxt.consume();
+
+    let mut block_stmts = vec![];
+
+    while !matches!(ctxt.peek().kind, TokenKind::Eof | TokenKind::RightBrace) {
+        let block_stmt = stmt(ctxt, ast)?;
+        block_stmts.push(block_stmt);
+    }
+
+    if !ctxt.consume_if(TokenKind::RightBrace) {
+        return Err(Into::into(error::UnexpectedToken {
+            start: ctxt.peek().start,
+            end: ctxt.peek().end,
+            source: ctxt.src_id,
+            expected: vec![TokenKind::RightBrace],
+        }));
+    }
+
+    let stmt = ast.add(stmt::Block {
+        stmts: block_stmts,
+    });
+
+    ast.attach(stmt.global_id(), SourceMetadata {
+        start: start_token.start,
+        end: ctxt.peek().start,
+        source: ctxt.src_id,
+    });
+
+    Ok(stmt)
 }
 
 #[cfg(test)]
@@ -126,19 +159,19 @@ mod tests {
     use test_case::test_case;
 
     #[test_case(b"var a;", &format!("Declaration(a, None)"))]
-    #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", Expr::Natural(2)))]
-    #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, Expr::Natural(12), Expr::Natural(2)))]
-    #[test_case(b"print -2;", &format!("Print({:?}({:?}))", UnaryOperator::Minus, Expr::Natural(2)))]
-    #[test_case(b"print 12 * 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Multiply, Expr::Natural(12), Expr::Natural(3)))]
-    #[test_case(b"print 12 + 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Plus, Expr::Natural(12), Expr::Natural(3)))]
+    #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", ExprKind::Natural(2)))]
+    #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)))]
+    #[test_case(b"print -2;", &format!("Print({:?}({:?}))", UnaryOperator::Minus, ExprKind::Natural(2)))]
+    #[test_case(b"print 12 * 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)))]
+    #[test_case(b"print 12 + 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)))]
     fn stmt_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();
-        let stmt_id = parse(&mut ctxt, &mut ast).unwrap();
+        let stmt = parse(&mut ctxt, &mut ast).unwrap();
 
-        assert_eq!(&debug_utils::fmt_stmt(stmt_id, &ast), expected);
+        assert_eq!(&debug_utils::fmt_stmt(stmt, &ast), expected);
 
-        let metadata: &SourceMetadata = ast.get(stmt_id);
+        let metadata: &SourceMetadata = ast.get(stmt.global_id());
         assert_eq!(metadata.source, Source::Prompt);
         assert_eq!(&source[metadata.start..metadata.end], source);
     }

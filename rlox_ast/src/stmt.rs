@@ -1,62 +1,51 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{Ast, AstElem, AstIndex, AstVec, ExprId, StrId, define_id};
+use crate::{Ast, AstElem, AstIndex, AstVec, Expr, StrId, define_id};
 
 #[derive(Clone, Copy, Debug)]
-pub enum Stmt {
+pub enum StmtKind {
     Print(PrintId),
     Declaration(DeclarationId),
-    Expr(ExprId),
+    Block(BlockId),
+    Expr(Expr),
 }
 
-impl AstElem<ExprId, StmtId> for Ast {
-    fn add(&mut self, elem: ExprId) -> StmtId {
+impl AstElem<Expr, Stmt> for Ast {
+    fn add(&mut self, elem: Expr) -> Stmt {
         let global_id = self.stmt_id;
 
         self.stmt_metadata_buffer.push(None);
         self.stmt_id += 1;
 
-        StmtId {
-            global_id,
-            kind: Stmt::Expr(elem),
+        Stmt {
+            global_id: StmtId(global_id),
+            kind: StmtKind::Expr(elem),
         }
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StmtId(usize);
+
 #[derive(Clone, Copy, Debug)]
-pub struct StmtId {
-    global_id: usize,
-    pub kind: Stmt,
-}
-impl Eq for StmtId {}
-
-impl std::hash::Hash for StmtId {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.global_id.hash(state);
-    }
-}
-
-impl Ord for StmtId {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.global_id.cmp(&other.global_id)
-    }
-}
-
-impl PartialOrd for StmtId {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for StmtId {
-    fn eq(&self, other: &Self) -> bool {
-        self.global_id == other.global_id
-    }
+pub struct Stmt {
+    global_id: StmtId,
+    kind: StmtKind,
 }
 
 impl AstIndex for StmtId {
     fn inner(&self) -> usize {
+        self.0
+    }
+}
+
+impl Stmt {
+    pub fn global_id(&self) -> StmtId {
         self.global_id
+    }
+
+    pub fn kind(&self) -> StmtKind {
+        self.kind
     }
 }
 
@@ -65,7 +54,7 @@ pub(crate) type PrintVec = AstVec<Print, PrintId>;
 
 #[derive(Clone, Debug)]
 pub struct Print {
-    pub expr: ExprId,
+    pub expr: Expr,
 }
 
 impl Index<PrintId> for Ast {
@@ -82,8 +71,8 @@ impl IndexMut<PrintId> for Ast {
     }
 }
 
-impl AstElem<Print, StmtId> for Ast {
-    fn add(&mut self, elem: Print) -> StmtId {
+impl AstElem<Print, Stmt> for Ast {
+    fn add(&mut self, elem: Print) -> Stmt {
         let global_id = self.stmt_id;
         let inner = PrintId::new(self.print_buffer.len());
 
@@ -91,9 +80,9 @@ impl AstElem<Print, StmtId> for Ast {
         self.stmt_metadata_buffer.push(None);
         self.stmt_id += 1;
 
-        StmtId {
-            global_id,
-            kind: Stmt::Print(inner),
+        Stmt {
+            global_id: StmtId(global_id),
+            kind: StmtKind::Print(inner),
         }
     }
 }
@@ -104,7 +93,7 @@ pub(crate) type DeclarationVec = AstVec<Declaration, DeclarationId>;
 #[derive(Clone, Debug)]
 pub struct Declaration {
     pub identifier: StrId,
-    pub value: Option<ExprId>,
+    pub value: Option<Expr>,
 }
 
 impl Index<DeclarationId> for Ast {
@@ -121,8 +110,8 @@ impl IndexMut<DeclarationId> for Ast {
     }
 }
 
-impl AstElem<Declaration, StmtId> for Ast {
-    fn add(&mut self, elem: Declaration) -> StmtId {
+impl AstElem<Declaration, Stmt> for Ast {
+    fn add(&mut self, elem: Declaration) -> Stmt {
         let global_id = self.stmt_id;
         let inner = DeclarationId::new(self.declaration_buffer.len());
 
@@ -130,9 +119,47 @@ impl AstElem<Declaration, StmtId> for Ast {
         self.stmt_metadata_buffer.push(None);
         self.stmt_id += 1;
 
-        StmtId {
-            global_id,
-            kind: Stmt::Declaration(inner),
+        Stmt {
+            global_id: StmtId(global_id),
+            kind: StmtKind::Declaration(inner),
+        }
+    }
+}
+
+define_id!(BlockId);
+pub(crate) type BlockVec = AstVec<Block, BlockId>;
+
+#[derive(Clone, Debug)]
+pub struct Block {
+    pub stmts: Vec<Stmt>,
+}
+
+impl Index<BlockId> for Ast {
+    type Output = Block;
+
+    fn index(&self, index: BlockId) -> &Self::Output {
+        &self.block_buffer[index]
+    }
+}
+
+impl IndexMut<BlockId> for Ast {
+    fn index_mut(&mut self, index: BlockId) -> &mut Self::Output {
+        &mut self.block_buffer[index]
+    }
+}
+
+impl AstElem<Block, Stmt> for Ast {
+    fn add(&mut self, elem: Block) -> Stmt {
+        let global_id = self.stmt_id;
+        let inner = BlockId::new(self.block_buffer.len());
+
+        self.block_buffer.push(elem);
+        self.stmt_metadata_buffer.push(None);
+        self.stmt_id += 1;
+
+        Stmt {
+            global_id: StmtId(global_id),
+            kind: StmtKind::Block(inner),
         }
     }
 }

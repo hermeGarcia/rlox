@@ -3,30 +3,12 @@ pub mod debug_utils;
 pub mod expr;
 pub mod stmt;
 
-pub use expr::{Expr, ExprId};
-pub use stmt::{Stmt, StmtId};
+pub use expr::{Expr, ExprId, ExprKind};
+pub use stmt::{Stmt, StmtId, StmtKind};
 
 use rlox_source::SourceMetadata;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
-
-pub type StmtWithId<Data> = DataWithId<StmtId, Data>;
-pub type ExprWithId<Data> = DataWithId<ExprId, Data>;
-
-#[derive(Clone, Copy)]
-pub struct DataWithId<Id, Data> {
-    pub my_id: Id,
-    pub data: Data,
-}
-
-impl<Id, Data> DataWithId<Id, Data> {
-    pub fn new(my_id: Id, data: Data) -> DataWithId<Id, Data> {
-        DataWithId {
-            my_id,
-            data,
-        }
-    }
-}
 
 #[macro_export]
 macro_rules! define_id {
@@ -34,7 +16,7 @@ macro_rules! define_id {
         #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
         pub struct $name(usize);
 
-        impl AstIndex for $name {
+        impl $crate::AstIndex for $name {
             fn inner(&self) -> usize {
                 self.0
             }
@@ -119,8 +101,13 @@ impl IndexMut<StrId> for Ast {
 
 impl AstElem<String, StrId> for Ast {
     fn add(&mut self, elem: String) -> StrId {
-        let id = StrId::new(self.str_buffer.len());
+        for (id, value) in self.str_buffer.inner.iter().enumerate() {
+            if value == &elem {
+                return StrId(id);
+            }
+        }
 
+        let id = StrId::new(self.str_buffer.len());
         self.str_buffer.push(elem);
 
         id
@@ -132,7 +119,7 @@ pub struct Ast {
     stmt_id: usize,
     expr_id: usize,
 
-    initial_block: Vec<StmtId>,
+    initial_block: Vec<Stmt>,
     str_buffer: StrVec,
 
     // Expression buffers
@@ -144,6 +131,7 @@ pub struct Ast {
     // Statement buffers
     print_buffer: stmt::PrintVec,
     declaration_buffer: stmt::DeclarationVec,
+    block_buffer: stmt::BlockVec,
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
 }
 
@@ -192,11 +180,11 @@ impl AstProperty<SourceMetadata, StmtId> for Ast {
 }
 
 impl Ast {
-    pub fn push_into_initial_block(&mut self, stmt_id: StmtId) {
-        self.initial_block.push(stmt_id);
+    pub fn push_into_initial_block(&mut self, stmt: Stmt) {
+        self.initial_block.push(stmt);
     }
 
-    pub fn initial_block(&self) -> &[StmtId] {
+    pub fn initial_block(&self) -> &[Stmt] {
         &self.initial_block
     }
 }

@@ -1,29 +1,58 @@
-use rlox_ast::stmt as rlox_stmt;
-use rlox_ast::{Ast, ExprId, Stmt, StmtId};
+use rlox_ast::stmt::*;
+use rlox_ast::{Ast, Expr, Stmt, StmtKind};
 
-use crate::EvalCtxt;
 use crate::RuntimeResult;
 use crate::expression;
+use crate::runtime::Runtime;
+use crate::value_system::Value;
 
 type StmtResult = RuntimeResult<()>;
 
-pub fn eval(stmt: StmtId, ast: &Ast, ctxt: &mut EvalCtxt) -> StmtResult {
-    match stmt.kind {
-        Stmt::Expr(id) => eval_expr_stmt(id, ast, ctxt),
-        Stmt::Print(inner) => eval_print(&ast[inner], ast, ctxt),
-        Stmt::Declaration(_inner) => todo!(),
+pub fn eval(stmt: Stmt, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+    match stmt.kind() {
+        StmtKind::Expr(inner) => expr_stmt(inner, ast, runtime),
+        StmtKind::Print(inner) => print(inner, ast, runtime),
+        StmtKind::Declaration(inner) => declaration(inner, ast, runtime),
+        StmtKind::Block(inner) => block(inner, ast, runtime),
     }
 }
 
-fn eval_print(stmt: &rlox_stmt::Print, ast: &Ast, ctxt: &mut EvalCtxt) -> StmtResult {
-    let expr_value = expression::eval(stmt.expr, ast, ctxt)?;
+fn declaration(id: DeclarationId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+    let declaration = &ast[id];
+
+    let value = match declaration.value {
+        None => Value::Nil,
+        Some(expr) => expression::deref_expression(expr, ast, runtime)?,
+    };
+
+    runtime.insert(declaration.identifier, value);
+
+    Ok(())
+}
+
+fn print(id: PrintId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+    let expr_value = expression::deref_expression(ast[id].expr, ast, runtime)?;
 
     println!("{expr_value}");
 
     Ok(())
 }
 
-fn eval_expr_stmt(expr_id: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> StmtResult {
-    expression::eval(expr_id, ast, ctxt)?;
+fn block(id: BlockId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+    let block = &ast[id];
+
+    runtime.enter_block();
+
+    for stmt in block.stmts.iter().copied() {
+        eval(stmt, ast, runtime)?;
+    }
+
+    runtime.leave_block();
+
+    Ok(())
+}
+
+fn expr_stmt(expr_id: Expr, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+    expression::deref_expression(expr_id, ast, runtime)?;
     Ok(())
 }

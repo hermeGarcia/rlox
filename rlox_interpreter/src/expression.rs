@@ -1,34 +1,73 @@
-use rlox_ast::expr::{Binary, BinaryOperator, Unary, UnaryOperator};
-use rlox_ast::{Ast, AstProperty, Expr, ExprId, ExprWithId};
+use rlox_ast::expr::*;
+use rlox_ast::{Ast, AstProperty, Expr, ExprId, ExprKind, StrId};
 
-use crate::EvalCtxt;
 use crate::RuntimeResult;
-use crate::error::OperationNotDefined;
+use crate::error::{InvalidAssign, OperationNotDefined, VarNotFound};
+use crate::runtime::Runtime;
 use crate::value_system::{self, Value, VsResult};
 
-pub fn eval(expr: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
-    expression(expr, ast, ctxt)
-}
-
-fn expression(expr: ExprId, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
-    match expr.kind {
-        Expr::Binary(inner) => binary(ExprWithId::new(expr, &ast[inner]), ast, ctxt),
-        Expr::Unary(inner) => unary(ExprWithId::new(expr, &ast[inner]), ast, ctxt),
-        Expr::Nil => Ok(Value::Nil),
-        Expr::Boolean(inner) => Ok(Value::Boolean(inner)),
-        Expr::Decimal(inner) => Ok(Value::Decimal(inner)),
-        Expr::Natural(inner) => Ok(Value::Natural(inner)),
-        Expr::Assign(_) => todo!(),
-        Expr::Identifier(_) => todo!(),
+pub fn deref_expression(expr: Expr, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    match expression(expr, ast, runtime)? {
+        Value::Addr(address) => Ok(*runtime.deref(address)),
+        other => Ok(other),
     }
 }
 
-fn binary(binary: ExprWithId<&Binary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
-    let lhs = expression(binary.data.lhs, ast, ctxt)?;
-    let rhs = expression(binary.data.rhs, ast, ctxt)?;
+pub fn expression(expr: Expr, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    match expr.kind() {
+        ExprKind::Nil => Ok(Value::Nil),
+        ExprKind::Boolean(inner) => Ok(Value::Boolean(inner)),
+        ExprKind::Decimal(inner) => Ok(Value::Decimal(inner)),
+        ExprKind::Natural(inner) => Ok(Value::Natural(inner)),
 
-    let Ok(result) = apply_binary_operator(binary.data.operator, lhs, rhs) else {
-        let metadata = *ast.get(binary.my_id);
+        ExprKind::Binary(inner) => binary(expr.global_id(), inner, ast, runtime),
+        ExprKind::Unary(inner) => unary(expr.global_id(), inner, ast, runtime),
+        ExprKind::Identifier(inner) => identifier(expr.global_id(), inner, ast, runtime),
+        ExprKind::Assign(inner) => assign(expr.global_id(), inner, ast, runtime),
+    }
+}
+
+pub fn assign(expr: ExprId, id: AssignId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let assign = &ast[id];
+
+    let Value::Addr(address) = expression(assign.lhs, ast, runtime)? else {
+        let metadata = *ast.get(expr);
+        return Err(From::from(InvalidAssign {
+            start: metadata.start,
+            end: metadata.end,
+            source: metadata.source,
+        }));
+    };
+
+    let new_value = deref_expression(assign.rhs, ast, runtime)?;
+
+    runtime.memory[address] = new_value;
+
+    Ok(Value::Nil)
+}
+
+pub fn identifier(expr: ExprId, id: StrId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let Some(value) = runtime.address(id) else {
+        let metadata = ast.get(expr);
+
+        return Err(From::from(VarNotFound {
+            start: metadata.start,
+            end: metadata.end,
+            source: metadata.source,
+        }));
+    };
+
+    Ok(Value::Addr(value))
+}
+
+pub fn binary(expr: ExprId, id: BinaryId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let binary = &ast[id];
+
+    let lhs = deref_expression(binary.lhs, ast, runtime)?;
+    let rhs = deref_expression(binary.rhs, ast, runtime)?;
+
+    let Ok(result) = apply_binary_operator(binary.operator, lhs, rhs) else {
+        let metadata = *ast.get(expr);
         return Err(From::from(OperationNotDefined {
             start: metadata.start,
             end: metadata.end,
@@ -61,11 +100,14 @@ fn apply_unary_operator(operator: UnaryOperator, operand: Value) -> VsResult<Val
     }
 }
 
-fn unary(unary: ExprWithId<&Unary>, ast: &Ast, ctxt: &mut EvalCtxt) -> RuntimeResult<Value> {
-    let operand = expression(unary.data.operand, ast, ctxt)?;
+pub fn unary(expr: ExprId, id: UnaryId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let unary = &ast[id];
 
-    let Ok(result) = apply_unary_operator(unary.data.operator, operand) else {
-        let metadata = *ast.get(unary.my_id);
+    let operand = deref_expression(unary.operand, ast, runtime)?;
+
+    let Ok(result) = apply_unary_operator(unary.operator, operand) else {
+        let metadata = *ast.get(expr);
+
         return Err(From::from(OperationNotDefined {
             start: metadata.start,
             end: metadata.end,

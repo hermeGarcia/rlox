@@ -3,7 +3,7 @@ use std::ops::{Index, IndexMut};
 use crate::{Ast, AstElem, AstIndex, AstVec, StrId, define_id};
 
 #[derive(Clone, Copy, Debug)]
-pub enum Expr {
+pub enum ExprKind {
     Assign(AssignId),
     Binary(BinaryId),
     Unary(UnaryId),
@@ -17,109 +17,97 @@ pub enum Expr {
 #[derive(Clone, Copy, Debug)]
 pub struct Nil;
 
-#[derive(Clone, Copy, Debug)]
-pub struct ExprId {
-    global_id: usize,
-    pub kind: Expr,
-}
-impl Eq for ExprId {}
-
-impl std::hash::Hash for ExprId {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.global_id.hash(state);
-    }
-}
-
-impl Ord for ExprId {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.global_id.cmp(&other.global_id)
-    }
-}
-
-impl PartialOrd for ExprId {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for ExprId {
-    fn eq(&self, other: &Self) -> bool {
-        self.global_id == other.global_id
-    }
-}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ExprId(usize);
 
 impl AstIndex for ExprId {
     fn inner(&self) -> usize {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Expr {
+    global_id: ExprId,
+    kind: ExprKind,
+}
+
+impl Expr {
+    pub fn global_id(&self) -> ExprId {
         self.global_id
     }
+
+    pub fn kind(&self) -> ExprKind {
+        self.kind
+    }
 }
 
-impl AstElem<StrId, ExprId> for Ast {
-    fn add(&mut self, elem: StrId) -> ExprId {
+impl AstElem<StrId, Expr> for Ast {
+    fn add(&mut self, elem: StrId) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Identifier(elem),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Identifier(elem),
         }
     }
 }
 
-impl AstElem<u64, ExprId> for Ast {
-    fn add(&mut self, elem: u64) -> ExprId {
+impl AstElem<u64, Expr> for Ast {
+    fn add(&mut self, elem: u64) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Natural(elem),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Natural(elem),
         }
     }
 }
 
-impl AstElem<f64, ExprId> for Ast {
-    fn add(&mut self, elem: f64) -> ExprId {
+impl AstElem<f64, Expr> for Ast {
+    fn add(&mut self, elem: f64) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Decimal(elem),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Decimal(elem),
         }
     }
 }
 
-impl AstElem<bool, ExprId> for Ast {
-    fn add(&mut self, elem: bool) -> ExprId {
+impl AstElem<bool, Expr> for Ast {
+    fn add(&mut self, elem: bool) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Boolean(elem),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Boolean(elem),
         }
     }
 }
 
-impl AstElem<Nil, ExprId> for Ast {
-    fn add(&mut self, _: Nil) -> ExprId {
+impl AstElem<Nil, Expr> for Ast {
+    fn add(&mut self, _: Nil) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Nil,
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Nil,
         }
     }
 }
@@ -129,8 +117,8 @@ pub(crate) type AssignVec = AstVec<Assign, AssignId>;
 
 #[derive(Clone, Debug, Copy)]
 pub struct Assign {
-    pub lhs: ExprId,
-    pub rhs: ExprId,
+    pub lhs: Expr,
+    pub rhs: Expr,
 }
 
 impl Index<AssignId> for Ast {
@@ -147,8 +135,8 @@ impl IndexMut<AssignId> for Ast {
     }
 }
 
-impl AstElem<Assign, ExprId> for Ast {
-    fn add(&mut self, elem: Assign) -> ExprId {
+impl AstElem<Assign, Expr> for Ast {
+    fn add(&mut self, elem: Assign) -> Expr {
         let global_id = self.expr_id;
         let kind = AssignId::new(self.assign_buffer.len());
 
@@ -156,9 +144,9 @@ impl AstElem<Assign, ExprId> for Ast {
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Assign(kind),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Assign(kind),
         }
     }
 }
@@ -183,8 +171,8 @@ pub enum BinaryOperator {
 #[derive(Clone, Debug, Copy)]
 pub struct Binary {
     pub operator: BinaryOperator,
-    pub lhs: ExprId,
-    pub rhs: ExprId,
+    pub lhs: Expr,
+    pub rhs: Expr,
 }
 
 impl Index<BinaryId> for Ast {
@@ -201,8 +189,8 @@ impl IndexMut<BinaryId> for Ast {
     }
 }
 
-impl AstElem<Binary, ExprId> for Ast {
-    fn add(&mut self, elem: Binary) -> ExprId {
+impl AstElem<Binary, Expr> for Ast {
+    fn add(&mut self, elem: Binary) -> Expr {
         let global_id = self.expr_id;
         let kind = BinaryId::new(self.binary_buffer.len());
 
@@ -210,9 +198,9 @@ impl AstElem<Binary, ExprId> for Ast {
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Binary(kind),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Binary(kind),
         }
     }
 }
@@ -229,7 +217,7 @@ pub enum UnaryOperator {
 #[derive(Clone, Copy, Debug)]
 pub struct Unary {
     pub operator: UnaryOperator,
-    pub operand: ExprId,
+    pub operand: Expr,
 }
 
 impl Index<UnaryId> for Ast {
@@ -246,8 +234,8 @@ impl IndexMut<UnaryId> for Ast {
     }
 }
 
-impl AstElem<Unary, ExprId> for Ast {
-    fn add(&mut self, elem: Unary) -> ExprId {
+impl AstElem<Unary, Expr> for Ast {
+    fn add(&mut self, elem: Unary) -> Expr {
         let global_id = self.expr_id;
         let kind = UnaryId::new(self.unary_buffer.len());
 
@@ -255,9 +243,9 @@ impl AstElem<Unary, ExprId> for Ast {
         self.expr_metadata_buffer.push(None);
         self.expr_id += 1;
 
-        ExprId {
-            global_id,
-            kind: Expr::Unary(kind),
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Unary(kind),
         }
     }
 }
