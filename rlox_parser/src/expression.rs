@@ -227,7 +227,7 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
         TokenKind::LeftParen => nested_expression(ctxt, ast),
 
         TokenKind::Identifier => {
-            let identifier = ast.add(identifier(ctxt, token));
+            let identifier = ast.add(&ctxt.src[token.start..token.end]);
             Ok(ast.add(identifier))
         }
 
@@ -271,10 +271,6 @@ fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     };
 
     Ok(inner)
-}
-
-pub fn identifier(ctxt: &Context, token: Token) -> String {
-    String::from_utf8_lossy(&ctxt.src[token.start..token.end]).to_string()
 }
 
 pub fn primitive_type<T: std::str::FromStr>(ctxt: &Context, token: Token) -> ParserResult<T> {

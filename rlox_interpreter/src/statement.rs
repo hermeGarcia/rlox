@@ -8,7 +8,7 @@ use crate::value_system::Value;
 
 type StmtResult = RuntimeResult<()>;
 
-pub fn eval(stmt: Stmt, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+pub fn eval<'a>(stmt: Stmt, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     match stmt.kind() {
         StmtKind::Expr(inner) => expr_stmt(inner, ast, runtime),
         StmtKind::Print(inner) => print(inner, ast, runtime),
@@ -17,7 +17,7 @@ pub fn eval(stmt: Stmt, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
     }
 }
 
-fn declaration(id: DeclarationId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+fn declaration<'a>(id: DeclarationId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     let declaration = &ast[id];
 
     let value = match declaration.value {
@@ -25,12 +25,12 @@ fn declaration(id: DeclarationId, ast: &Ast, runtime: &mut Runtime) -> StmtResul
         Some(expr) => expression::deref_expression(expr, ast, runtime)?,
     };
 
-    runtime.insert(declaration.identifier, value);
+    runtime.insert(&ast[declaration.identifier], value);
 
     Ok(())
 }
 
-fn print(id: PrintId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+fn print<'a>(id: PrintId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     let expr_value = expression::deref_expression(ast[id].expr, ast, runtime)?;
 
     println!("{expr_value}");
@@ -38,12 +38,12 @@ fn print(id: PrintId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
     Ok(())
 }
 
-fn block(id: BlockId, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+fn block<'a>(id: BlockId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     let block = &ast[id];
 
     runtime.enter_block();
 
-    for stmt in block.stmts.iter().copied() {
+    for stmt in block.iter().copied() {
         eval(stmt, ast, runtime)?;
     }
 

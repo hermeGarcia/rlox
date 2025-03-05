@@ -22,7 +22,7 @@ pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
             format!("{:?}({operand})", unary.operator)
         }
 
-        ExprKind::Identifier(string_id) => ast[string_id].clone(),
+        ExprKind::Identifier(string_id) => ast[string_id].to_string(),
 
         other => format!("{other:?}"),
     }
@@ -33,8 +33,8 @@ pub fn fmt_stmt(stmt: Stmt, ast: &Ast) -> String {
         StmtKind::Expr(inner) => fmt_expr(inner, ast),
 
         StmtKind::Block(id) => {
-            let block = &ast[id];
-            let inner: Vec<_> = block.stmts.iter().map(|stmt| fmt_stmt(*stmt, ast)).collect();
+            let stmts = ast[id].iter();
+            let inner: Vec<_> = stmts.map(|stmt| fmt_stmt(*stmt, ast)).collect();
 
             format!("Block({inner:?})")
         }

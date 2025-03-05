@@ -1,4 +1,3 @@
-use rlox_ast::StrId;
 use std::collections::HashMap;
 
 use crate::value_system::Value;
@@ -8,29 +7,29 @@ pub type MemAddr = usize;
 const MEMORY_SIZE: usize = 4_000 / std::mem::size_of::<Value>();
 
 #[derive(Default)]
-struct Env {
+struct Env<'a> {
     start: usize,
-    inner: HashMap<StrId, MemAddr>,
+    inner: HashMap<&'a str, MemAddr>,
 }
 
-impl Env {
-    pub fn get(&self, id: StrId) -> Option<MemAddr> {
-        self.inner.get(&id).copied()
+impl<'a> Env<'a> {
+    pub fn get(&self, id: &str) -> Option<MemAddr> {
+        self.inner.get(id).copied()
     }
 
-    pub fn insert(&mut self, id: StrId, value: MemAddr) {
+    pub fn insert(&mut self, id: &'a str, value: MemAddr) {
         self.inner.insert(id, value);
     }
 }
 
-pub struct Runtime {
+pub struct Runtime<'a> {
     free_address: usize,
-    var_env: Vec<Env>,
+    var_env: Vec<Env<'a>>,
     pub memory: Vec<Value>,
 }
 
-impl Runtime {
-    pub fn new() -> Runtime {
+impl<'a> Runtime<'a> {
+    pub fn new() -> Runtime<'a> {
         Runtime {
             free_address: 0,
             memory: vec![Value::Nil; MEMORY_SIZE],
@@ -38,7 +37,7 @@ impl Runtime {
         }
     }
 
-    pub fn address(&self, id: StrId) -> Option<MemAddr> {
+    pub fn address(&self, id: &str) -> Option<MemAddr> {
         for env in self.var_env.iter().rev() {
             if let Some(value) = env.get(id) {
                 return Some(value);
@@ -48,7 +47,7 @@ impl Runtime {
         None
     }
 
-    pub fn insert(&mut self, id: StrId, value: Value) -> MemAddr {
+    pub fn insert(&mut self, id: &'a str, value: Value) -> MemAddr {
         if self.free_address == self.memory.len() {
             self.memory.extend((0..MEMORY_SIZE).map(|_| Value::Nil));
         }

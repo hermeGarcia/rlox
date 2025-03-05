@@ -26,7 +26,7 @@ fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     let identifier = match ctxt.peek().kind {
         TokenKind::Identifier => {
             let token = ctxt.consume();
-            Ok(ast.add(expression::identifier(ctxt, token)))
+            Ok(ast.add(&ctxt.src[token.start..token.end]))
         }
 
         _ => Err(error::UnexpectedToken {
@@ -136,9 +136,7 @@ fn block_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         }));
     }
 
-    let stmt = ast.add(stmt::Block {
-        stmts: block_stmts,
-    });
+    let stmt = ast.add(block_stmts.as_slice());
 
     ast.attach(stmt.global_id(), SourceMetadata {
         start: start_token.start,

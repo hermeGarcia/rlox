@@ -47,7 +47,7 @@ pub fn assign(expr: ExprId, id: AssignId, ast: &Ast, runtime: &mut Runtime) -> R
 }
 
 pub fn identifier(expr: ExprId, id: StrId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
-    let Some(value) = runtime.address(id) else {
+    let Some(value) = runtime.address(&ast[id]) else {
         let metadata = ast.get(expr);
 
         return Err(From::from(VarNotFound {

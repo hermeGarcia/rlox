@@ -82,35 +82,39 @@ impl<Elem, Index: AstIndex> AstVec<Elem, Index> {
     }
 }
 
-define_id!(StrId);
-pub(crate) type StrVec = AstVec<String, StrId>;
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct StrId {
+    start: usize,
+    end: usize,
+}
+
+pub(crate) type StrVec = Vec<u8>;
 
 impl Index<StrId> for Ast {
-    type Output = String;
+    type Output = str;
 
     fn index(&self, index: StrId) -> &Self::Output {
-        &self.str_buffer[index]
+        let slice = &self.str_buffer[index.start..index.end];
+
+        // Is safe to skip validity checks since this is
+        // a already parsed identifier, which means the slice
+        // contains valid UFT-8
+        unsafe { std::str::from_utf8_unchecked(slice) }
     }
 }
 
-impl IndexMut<StrId> for Ast {
-    fn index_mut(&mut self, index: StrId) -> &mut Self::Output {
-        &mut self.str_buffer[index]
-    }
-}
+impl AstElem<&[u8], StrId> for Ast {
+    fn add(&mut self, elem: &[u8]) -> StrId {
+        let str_start = self.str_buffer.len();
 
-impl AstElem<String, StrId> for Ast {
-    fn add(&mut self, elem: String) -> StrId {
-        for (id, value) in self.str_buffer.inner.iter().enumerate() {
-            if value == &elem {
-                return StrId(id);
-            }
+        self.str_buffer.extend_from_slice(elem);
+
+        let str_end = self.str_buffer.len();
+
+        StrId {
+            start: str_start,
+            end: str_end,
         }
-
-        let id = StrId::new(self.str_buffer.len());
-        self.str_buffer.push(elem);
-
-        id
     }
 }
 
@@ -131,7 +135,7 @@ pub struct Ast {
     // Statement buffers
     print_buffer: stmt::PrintVec,
     declaration_buffer: stmt::DeclarationVec,
-    block_buffer: stmt::BlockVec,
+    stmt_buffer: stmt::BlockVec,
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
 }
 

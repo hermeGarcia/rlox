@@ -20,7 +20,7 @@ fn expression<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Res
 }
 
 fn identifier<W: Write>(expr: ExprId, id: StrId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    writeln!(writer, "\"{expr:?}\" [label=\"{}\"]", ast[id])?;
+    writeln!(writer, "\"{expr:?}\" [label=\"{}\"]", &ast[id])?;
     Ok(())
 }
 

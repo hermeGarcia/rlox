@@ -24,7 +24,7 @@ fn block<W: Write>(stmt: StmtId, id: BlockId, ast: &Ast, writer: &mut BufWriter<
 
     writeln!(writer, "\"{stmt:?}\" [label=\"Block\"]")?;
 
-    for inner_stmt in block.stmts.iter().copied() {
+    for inner_stmt in block.iter().copied() {
         writeln!(writer, "\"{stmt:?}\" -> \"{:?}\"", inner_stmt.global_id())?;
         graph(inner_stmt, ast, writer)?;
     }
@@ -46,7 +46,7 @@ fn print<W: Write>(stmt: StmtId, id: PrintId, ast: &Ast, writer: &mut BufWriter<
 fn declaration<W: Write>(stmt: StmtId, id: DeclarationId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     let data = &ast[id];
 
-    writeln!(writer, "\"{:?}\" [label=\"{}\"]", data.identifier, ast[data.identifier])?;
+    writeln!(writer, "\"{:?}\" [label=\"{}\"]", data.identifier, &ast[data.identifier])?;
     writeln!(writer, "\"{stmt:?}\" [label=\"Declaration\"]")?;
     writeln!(writer, "\"{stmt:?}\" -> \"{:?}\"", data.identifier)?;
 

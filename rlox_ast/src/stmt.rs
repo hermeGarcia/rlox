@@ -126,40 +126,45 @@ impl AstElem<Declaration, Stmt> for Ast {
     }
 }
 
-define_id!(BlockId);
-pub(crate) type BlockVec = AstVec<Block, BlockId>;
-
-#[derive(Clone, Debug)]
-pub struct Block {
-    pub stmts: Vec<Stmt>,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BlockId {
+    start: usize,
+    end: usize,
 }
 
+pub(crate) type BlockVec = Vec<Stmt>;
+
 impl Index<BlockId> for Ast {
-    type Output = Block;
+    type Output = [Stmt];
 
     fn index(&self, index: BlockId) -> &Self::Output {
-        &self.block_buffer[index]
+        &self.stmt_buffer[index.start..index.end]
     }
 }
 
 impl IndexMut<BlockId> for Ast {
     fn index_mut(&mut self, index: BlockId) -> &mut Self::Output {
-        &mut self.block_buffer[index]
+        &mut self.stmt_buffer[index.start..index.end]
     }
 }
 
-impl AstElem<Block, Stmt> for Ast {
-    fn add(&mut self, elem: Block) -> Stmt {
+impl AstElem<&[Stmt], Stmt> for Ast {
+    fn add(&mut self, elem: &[Stmt]) -> Stmt {
         let global_id = self.stmt_id;
-        let inner = BlockId::new(self.block_buffer.len());
+        let block_start = self.stmt_buffer.len();
 
-        self.block_buffer.push(elem);
+        self.stmt_buffer.extend_from_slice(elem);
         self.stmt_metadata_buffer.push(None);
         self.stmt_id += 1;
 
+        let block_end = self.stmt_buffer.len();
+
         Stmt {
             global_id: StmtId(global_id),
-            kind: StmtKind::Block(inner),
+            kind: StmtKind::Block(BlockId {
+                start: block_start,
+                end: block_end,
+            }),
         }
     }
 }
