@@ -8,7 +8,7 @@ use crate::value_system::{self, Value, VsResult};
 
 pub fn deref_expression(expr: Expr, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
     match expression(expr, ast, runtime)? {
-        Value::Addr(address) => Ok(*runtime.deref(address)),
+        Value::Addr(address) => Ok(runtime.deref(address).clone()),
         other => Ok(other),
     }
 }
@@ -19,6 +19,7 @@ pub fn expression(expr: Expr, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult
         ExprKind::Boolean(inner) => Ok(Value::Boolean(inner)),
         ExprKind::Decimal(inner) => Ok(Value::Decimal(inner)),
         ExprKind::Natural(inner) => Ok(Value::Natural(inner)),
+        ExprKind::String(inner) => Ok(Value::String(ast[inner].into())),
 
         ExprKind::Binary(inner) => binary(expr.global_id(), inner, ast, runtime),
         ExprKind::Unary(inner) => unary(expr.global_id(), inner, ast, runtime),

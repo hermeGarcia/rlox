@@ -1,24 +1,24 @@
 
-var x = 1;
+var x = "1";
 
 {
-    var x = 2;
+    var x = "2";
     // Expect 2
     print x;
 
     {
-        var x = 3;
+        var x = "3";
         // Expect 3
         print x;
     }
 
-    var y = 12;
+    var y = "12";
     // Expect 12
     print  y;
 
 }
 
-var y = 14;
+var y = "14";
 // Expect 14
 print y;
 // Expect 1

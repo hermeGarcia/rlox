@@ -1,4 +1,5 @@
 use rlox_ast::expr;
+use rlox_ast::expr::{Identifier, LoxString};
 use rlox_ast::{Ast, AstElem, AstProperty, Expr};
 use rlox_source::SourceMetadata;
 
@@ -226,9 +227,11 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         TokenKind::LeftParen => nested_expression(ctxt, ast),
 
+        TokenKind::String => lox_str(ctxt, ast),
+
         TokenKind::Identifier => {
             let identifier = ast.add(&ctxt.src[token.start..token.end]);
-            Ok(ast.add(identifier))
+            Ok(ast.add(Identifier::new(identifier)))
         }
 
         _ => Err(Into::into(error::UnexpectedToken {
@@ -254,6 +257,18 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     });
 
     Ok(primary)
+}
+
+fn lox_str(ctxt: &Context, ast: &mut Ast) -> ParserResult<Expr> {
+    let token = ctxt.peek();
+
+    // Double quotes do not need to be stored
+    let str_start = token.start + 1;
+    let str_end = token.end - 1;
+
+    let lox_str = ast.add(&ctxt.src[str_start..str_end]);
+
+    Ok(ast.add(LoxString::new(lox_str)))
 }
 
 fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {

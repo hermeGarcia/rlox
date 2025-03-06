@@ -22,7 +22,7 @@ pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
             format!("{:?}({operand})", unary.operator)
         }
 
-        ExprKind::Identifier(string_id) => ast[string_id].to_string(),
+        ExprKind::Identifier(inner) | ExprKind::String(inner) => ast[inner].into(),
 
         other => format!("{other:?}"),
     }

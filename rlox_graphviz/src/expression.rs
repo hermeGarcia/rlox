@@ -8,14 +8,16 @@ pub fn graph<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Resu
 
 fn expression<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     match expr.kind() {
-        ExprKind::Boolean(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
-        ExprKind::Natural(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
-        ExprKind::Decimal(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
         ExprKind::Binary(inner) => binary(expr.global_id(), inner, ast, writer),
         ExprKind::Unary(inner) => unary(expr.global_id(), inner, ast, writer),
         ExprKind::Assign(inner) => assign(expr.global_id(), inner, ast, writer),
         ExprKind::Identifier(inner) => identifier(expr.global_id(), inner, ast, writer),
-        ExprKind::Nil => writeln!(writer, "\"{expr:?}\" [label=\"nil\"]",),
+
+        ExprKind::Nil => writeln!(writer, "\"{:?}\" [label=\"nil\"]", expr.global_id()),
+        ExprKind::Boolean(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
+        ExprKind::Natural(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
+        ExprKind::Decimal(inner) => writeln!(writer, "\"{:?}\" [label=\"{inner}\"]", expr.global_id()),
+        ExprKind::String(inner) => writeln!(writer, "\"{:?}\" [label=\"Str({})\"]", expr.global_id(), &ast[inner]),
     }
 }
 

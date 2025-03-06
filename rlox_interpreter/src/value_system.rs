@@ -2,13 +2,14 @@ use crate::runtime::MemAddr;
 
 pub type VsResult<T> = Result<T, OperationNotDefined>;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Value {
     Nil,
     Boolean(bool),
     Decimal(f64),
     Natural(u64),
     Signed(i64),
+    String(String),
     Addr(MemAddr),
 }
 
@@ -21,6 +22,7 @@ impl std::fmt::Display for Value {
             Value::Natural(inner) => inner.fmt(f),
             Value::Signed(inner) => inner.fmt(f),
             Value::Addr(inner) => inner.fmt(f),
+            Value::String(inner) => inner.fmt(f),
         }
     }
 }
@@ -29,19 +31,19 @@ impl std::fmt::Display for Value {
 pub struct OperationNotDefined;
 
 fn cast_to_common(lhs: Value, rhs: Value) -> VsResult<(Value, Value)> {
-    match (lhs, rhs) {
+    match (&lhs, &rhs) {
         (Value::Nil, _) => Ok((lhs, rhs)),
         (_, Value::Nil) => Ok((lhs, rhs)),
         (Value::Boolean(_), Value::Boolean(_)) => Ok((lhs, rhs)),
         (Value::Natural(_), Value::Natural(_)) => Ok((lhs, rhs)),
         (Value::Decimal(_), Value::Decimal(_)) => Ok((lhs, rhs)),
         (Value::Signed(_), Value::Signed(_)) => Ok((lhs, rhs)),
-        (Value::Signed(_), Value::Natural(rhs)) => Ok((lhs, Value::Signed(rhs as i64))),
-        (Value::Natural(lhs), Value::Signed(_)) => Ok((Value::Signed(lhs as i64), rhs)),
-        (Value::Natural(lhs), Value::Decimal(_)) => Ok((Value::Decimal(lhs as f64), rhs)),
-        (Value::Decimal(_), Value::Natural(rhs)) => Ok((lhs, Value::Decimal(rhs as f64))),
-        (Value::Signed(lhs), Value::Decimal(_)) => Ok((Value::Decimal(lhs as f64), rhs)),
-        (Value::Decimal(_), Value::Signed(rhs)) => Ok((lhs, Value::Decimal(rhs as f64))),
+        (Value::Signed(_), Value::Natural(rhs)) => Ok((lhs, Value::Signed(*rhs as i64))),
+        (Value::Natural(lhs), Value::Signed(_)) => Ok((Value::Signed(*lhs as i64), rhs)),
+        (Value::Natural(lhs), Value::Decimal(_)) => Ok((Value::Decimal(*lhs as f64), rhs)),
+        (Value::Decimal(_), Value::Natural(rhs)) => Ok((lhs, Value::Decimal(*rhs as f64))),
+        (Value::Signed(lhs), Value::Decimal(_)) => Ok((Value::Decimal(*lhs as f64), rhs)),
+        (Value::Decimal(_), Value::Signed(rhs)) => Ok((lhs, Value::Decimal(*rhs as f64))),
         _ => Err(OperationNotDefined),
     }
 }

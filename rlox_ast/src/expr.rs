@@ -11,11 +11,42 @@ pub enum ExprKind {
     Natural(u64),
     Decimal(f64),
     Boolean(bool),
+    String(StrId),
     Nil,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct Nil;
+
+#[derive(Clone, Copy, Debug)]
+pub struct Identifier(StrId);
+
+impl From<Identifier> for ExprKind {
+    fn from(value: Identifier) -> Self {
+        ExprKind::Identifier(value.0)
+    }
+}
+
+impl Identifier {
+    pub fn new(inner: StrId) -> Identifier {
+        Identifier(inner)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct LoxString(StrId);
+
+impl From<LoxString> for ExprKind {
+    fn from(value: LoxString) -> Self {
+        ExprKind::String(value.0)
+    }
+}
+
+impl LoxString {
+    pub fn new(inner: StrId) -> LoxString {
+        LoxString(inner)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ExprId(usize);
@@ -42,8 +73,8 @@ impl Expr {
     }
 }
 
-impl AstElem<StrId, Expr> for Ast {
-    fn add(&mut self, elem: StrId) -> Expr {
+impl AstElem<Identifier, Expr> for Ast {
+    fn add(&mut self, elem: Identifier) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
@@ -51,7 +82,21 @@ impl AstElem<StrId, Expr> for Ast {
 
         Expr {
             global_id: ExprId(global_id),
-            kind: ExprKind::Identifier(elem),
+            kind: elem.into(),
+        }
+    }
+}
+
+impl AstElem<LoxString, Expr> for Ast {
+    fn add(&mut self, elem: LoxString) -> Expr {
+        let global_id = self.expr_id;
+
+        self.expr_metadata_buffer.push(None);
+        self.expr_id += 1;
+
+        Expr {
+            global_id: ExprId(global_id),
+            kind: elem.into(),
         }
     }
 }
