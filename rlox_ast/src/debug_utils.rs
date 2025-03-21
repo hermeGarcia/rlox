@@ -39,6 +39,21 @@ pub fn fmt_stmt(stmt: Stmt, ast: &Ast) -> String {
             format!("Block({inner:?})")
         }
 
+        StmtKind::IfElse(id) => {
+            let stmt = &ast[id];
+
+            let condition = fmt_expr(stmt.condition, ast);
+
+            let if_branch = fmt_stmt(stmt.if_branch, ast);
+
+            let else_branch = match stmt.else_branch {
+                Some(branch) => fmt_stmt(branch, ast),
+                None => "None".into(),
+            };
+
+            format!("IfElse({condition},{if_branch},{else_branch})")
+        }
+
         StmtKind::Print(id) => {
             let print = &ast[id];
             let operand = fmt_expr(print.expr, ast);

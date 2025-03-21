@@ -6,6 +6,7 @@ pub enum RuntimeError {
     OperationNotDefined(OperationNotDefined),
     VarNotFound(VarNotFound),
     InvalidAssign(InvalidAssign),
+    UnexpectedValue(UnexpectedValue),
 }
 
 impl From<RuntimeError> for Error {
@@ -14,6 +15,7 @@ impl From<RuntimeError> for Error {
             RuntimeError::VarNotFound(e) => e.into(),
             RuntimeError::OperationNotDefined(e) => e.into(),
             RuntimeError::InvalidAssign(e) => e.into(),
+            RuntimeError::UnexpectedValue(e) => e.into(),
         }
     }
 }
@@ -88,6 +90,34 @@ impl From<InvalidAssign> for RuntimeError {
 impl Message for InvalidAssign {
     fn description(&self) -> String {
         "Assignments need a memory location".to_string()
+    }
+
+    fn source_metadata(&self) -> SourceMetadata {
+        SourceMetadata {
+            start: self.start,
+            end: self.end,
+            source: self.source,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct UnexpectedValue {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) source: Source,
+    pub(crate) value: String,
+}
+
+impl From<UnexpectedValue> for RuntimeError {
+    fn from(value: UnexpectedValue) -> Self {
+        RuntimeError::UnexpectedValue(value)
+    }
+}
+
+impl Message for UnexpectedValue {
+    fn description(&self) -> String {
+        format!("Evaluated to {}", self.value)
     }
 
     fn source_metadata(&self) -> SourceMetadata {

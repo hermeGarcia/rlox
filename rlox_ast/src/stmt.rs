@@ -7,6 +7,7 @@ pub enum StmtKind {
     Print(PrintId),
     Declaration(DeclarationId),
     Block(BlockId),
+    IfElse(IfElseId),
     Expr(Expr),
 }
 
@@ -165,6 +166,46 @@ impl AstElem<&[Stmt], Stmt> for Ast {
                 start: block_start,
                 end: block_end,
             }),
+        }
+    }
+}
+
+define_id!(IfElseId);
+pub(crate) type IfElseVec = AstVec<IfElse, IfElseId>;
+
+#[derive(Clone, Debug)]
+pub struct IfElse {
+    pub condition: Expr,
+    pub if_branch: Stmt,
+    pub else_branch: Option<Stmt>,
+}
+
+impl Index<IfElseId> for Ast {
+    type Output = IfElse;
+
+    fn index(&self, index: IfElseId) -> &Self::Output {
+        &self.ifelse_buffer[index]
+    }
+}
+
+impl IndexMut<IfElseId> for Ast {
+    fn index_mut(&mut self, index: IfElseId) -> &mut Self::Output {
+        &mut self.ifelse_buffer[index]
+    }
+}
+
+impl AstElem<IfElse, Stmt> for Ast {
+    fn add(&mut self, elem: IfElse) -> Stmt {
+        let global_id = self.stmt_id;
+        let inner = IfElseId::new(self.ifelse_buffer.len());
+
+        self.ifelse_buffer.push(elem);
+        self.stmt_metadata_buffer.push(None);
+        self.stmt_id += 1;
+
+        Stmt {
+            global_id: StmtId(global_id),
+            kind: StmtKind::IfElse(inner),
         }
     }
 }

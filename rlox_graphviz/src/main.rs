@@ -1,3 +1,6 @@
+// Example of graphviz:
+// dot ~/Downloads/block.dot -T svg -o ~/Downloads/block.svg
+
 use rlox_source::{Source, SourceFile, SourceLibrary};
 use std::fs::File;
 use std::fs::read_to_string;

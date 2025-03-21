@@ -16,8 +16,49 @@ fn stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         TokenKind::Var => var_stmt(ctxt, ast),
         TokenKind::Print => print_stmt(ctxt, ast),
         TokenKind::LeftBrace => block_stmt(ctxt, ast),
+        TokenKind::If => if_else_stmt(ctxt, ast),
         _ => expr_stmt(ctxt, ast),
     }
+}
+
+fn parse_else_branch(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Option<Stmt>> {
+    if !ctxt.consume_if(TokenKind::Else) {
+        return Ok(None);
+    }
+
+    match ctxt.peek().kind {
+        TokenKind::If => if_else_stmt(ctxt, ast).map(Some),
+        TokenKind::LeftBrace => block_stmt(ctxt, ast).map(Some),
+
+        _ => Err(From::from(error::UnexpectedToken {
+            start: ctxt.peek().start,
+            end: ctxt.peek().end,
+            source: ctxt.src_id,
+            expected: vec![TokenKind::If, TokenKind::LeftBrace],
+        })),
+    }
+}
+
+fn if_else_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
+    let start_token = ctxt.consume();
+
+    let condition = expression::parse(ctxt, ast)?;
+    let if_branch = block_stmt(ctxt, ast)?;
+    let else_branch = parse_else_branch(ctxt, ast)?;
+
+    let stmt = ast.add(stmt::IfElse {
+        condition,
+        if_branch,
+        else_branch,
+    });
+
+    ast.attach(stmt.global_id(), SourceMetadata {
+        start: start_token.start,
+        end: ctxt.peek().start,
+        source: ctxt.src_id,
+    });
+
+    Ok(stmt)
 }
 
 fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
@@ -156,6 +197,9 @@ mod tests {
     use rlox_source::Source;
     use test_case::test_case;
 
+    #[rustfmt::skip]
+    #[test_case(b"if false { true; } else { false; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),Block([\"Boolean(false)\"]))")]
+    #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)")]
     #[test_case(b"var a;", &format!("Declaration(a, None)"))]
     #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", ExprKind::Natural(2)))]
     #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)))]

@@ -9,6 +9,7 @@ pub fn graph<W: Write>(stmt: Stmt, ast: &Ast, writer: &mut BufWriter<W>) -> Resu
         StmtKind::Print(inner) => print(stmt.global_id(), inner, ast, writer),
         StmtKind::Block(inner) => block(stmt.global_id(), inner, ast, writer),
         StmtKind::Declaration(inner) => declaration(stmt.global_id(), inner, ast, writer),
+        StmtKind::IfElse(inner) => if_else(stmt.global_id(), inner, ast, writer),
         StmtKind::Expr(inner) => stmt_expr(stmt.global_id(), inner, ast, writer),
     }
 }
@@ -53,6 +54,25 @@ fn declaration<W: Write>(stmt: StmtId, id: DeclarationId, ast: &Ast, writer: &mu
     if let Some(initialization) = data.value {
         expression::graph(initialization, ast, writer)?;
         writeln!(writer, "\"{stmt:?}\" -> \"{:?}\"", initialization.global_id())?;
+    }
+
+    Ok(())
+}
+
+fn if_else<W: Write>(stmt_id: StmtId, id: IfElseId, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+    let stmt = &ast[id];
+
+    writeln!(writer, "\"{stmt_id:?}\" [label=\"IfElse\"]")?;
+
+    writeln!(writer, "\"{stmt_id:?}\" -> \"{:?}\"", stmt.condition.global_id())?;
+    expression::graph(stmt.condition, ast, writer)?;
+
+    writeln!(writer, "\"{stmt_id:?}\" -> \"{:?}\"", stmt.if_branch.global_id())?;
+    graph(stmt.if_branch, ast, writer)?;
+
+    if let Some(else_branch) = stmt.else_branch {
+        writeln!(writer, "\"{stmt_id:?}\" -> \"{:?}\"", else_branch.global_id())?;
+        graph(else_branch, ast, writer)?;
     }
 
     Ok(())

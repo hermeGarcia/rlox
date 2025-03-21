@@ -136,6 +136,7 @@ pub struct Ast {
     print_buffer: stmt::PrintVec,
     declaration_buffer: stmt::DeclarationVec,
     stmt_buffer: stmt::BlockVec,
+    ifelse_buffer: stmt::IfElseVec,
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
 }
 

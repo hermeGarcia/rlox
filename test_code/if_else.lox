@@ -1,0 +1,38 @@
+
+if 1 + 2 == 3 {
+    print true;
+}
+
+
+if 1 + 2 != 3 {
+    print false;
+} else {
+    print true;
+}
+
+
+var test = 11;
+
+if test == 1 {
+    print "Is one";
+} else if test == 2 {
+    print "Is two";
+} else if test == 3 {
+    print "Is three";
+} else if test == 4 {
+    print "Is four";
+} else if test == 5 {
+    print "Is five";
+} else if test == 6 {
+    print "Is six";
+} else if test == 7 {
+    print "Is seven";
+} else if test == 8 {
+    print "Is eight";
+} else if test == 9 {
+    print "Is nine";
+} else if test == 10 {
+    print "Is ten";
+} else {
+    print "What are you!?";
+}
