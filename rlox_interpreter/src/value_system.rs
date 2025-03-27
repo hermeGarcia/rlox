@@ -171,6 +171,24 @@ pub fn not(value: Value) -> VsResult<Value> {
     }
 }
 
+pub fn and(lhs: Value, rhs: Value) -> VsResult<Value> {
+    match cast_to_common(lhs, rhs)? {
+        (Value::Nil, _) => Ok(Value::Nil),
+        (_, Value::Nil) => Ok(Value::Nil),
+        (Value::Boolean(lhs), Value::Boolean(rhs)) => Ok(Value::Boolean(lhs && rhs)),
+        _ => Err(OperationNotDefined),
+    }
+}
+
+pub fn or(lhs: Value, rhs: Value) -> VsResult<Value> {
+    match cast_to_common(lhs, rhs)? {
+        (Value::Nil, _) => Ok(Value::Nil),
+        (_, Value::Nil) => Ok(Value::Nil),
+        (Value::Boolean(lhs), Value::Boolean(rhs)) => Ok(Value::Boolean(lhs || rhs)),
+        _ => Err(OperationNotDefined),
+    }
+}
+
 pub fn neg(value: Value) -> VsResult<Value> {
     match value {
         Value::Nil => Ok(Value::Nil),

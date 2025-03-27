@@ -1,5 +1,5 @@
 use rlox_ast::expr;
-use rlox_ast::expr::{Identifier, LoxString};
+use rlox_ast::expr::{BinaryOperator, Identifier, LoxString};
 use rlox_ast::{Ast, AstElem, AstProperty, Expr};
 use rlox_source::SourceMetadata;
 
@@ -23,18 +23,68 @@ fn assign_operator(ctxt: &Context) -> Option<()> {
 }
 
 fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
-    let mut expr = equality(ctxt, ast)?;
+    let mut expr = logic_or(ctxt, ast)?;
 
     if match_and_consume(ctxt, assign_operator).is_some() {
         let assign_expr = expr::Assign {
             lhs: expr,
-            rhs: equality(ctxt, ast)?,
+            rhs: logic_or(ctxt, ast)?,
         };
 
         let lhs_metadata: SourceMetadata = *ast.get(assign_expr.lhs.global_id());
         let rhs_metadata: SourceMetadata = *ast.get(assign_expr.rhs.global_id());
 
         expr = ast.add(assign_expr);
+
+        ast.attach(expr.global_id(), SourceMetadata {
+            start: lhs_metadata.start,
+            end: rhs_metadata.end,
+            source: ctxt.src_id,
+        });
+    }
+
+    Ok(expr)
+}
+
+fn logic_or(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
+    let mut expr = logic_and(ctxt, ast)?;
+
+    if ctxt.consume_if(TokenKind::Or) {
+        let binary_expr = expr::Binary {
+            lhs: expr,
+            rhs: logic_and(ctxt, ast)?,
+            operator: BinaryOperator::LogicOr,
+        };
+
+        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs.global_id());
+
+        expr = ast.add(binary_expr);
+
+        ast.attach(expr.global_id(), SourceMetadata {
+            start: lhs_metadata.start,
+            end: rhs_metadata.end,
+            source: ctxt.src_id,
+        });
+    }
+
+    Ok(expr)
+}
+
+fn logic_and(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
+    let mut expr = equality(ctxt, ast)?;
+
+    if ctxt.consume_if(TokenKind::And) {
+        let binary_expr = expr::Binary {
+            lhs: expr,
+            rhs: equality(ctxt, ast)?,
+            operator: BinaryOperator::LogicAnd,
+        };
+
+        let lhs_metadata: SourceMetadata = *ast.get(binary_expr.lhs.global_id());
+        let rhs_metadata: SourceMetadata = *ast.get(binary_expr.rhs.global_id());
+
+        expr = ast.add(binary_expr);
 
         ast.attach(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
@@ -327,6 +377,8 @@ mod tests {
     #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, ExprKind::Natural(2)))]
     #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)))]
     #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)))]
+    #[test_case(b"true and false", &format!("{:?}({:?}, {:?})", BinaryOperator::LogicAnd, ExprKind::Boolean(true), ExprKind::Boolean(false)))]
+    #[test_case(b"true or false and true", "LogicOr(Boolean(true), LogicAnd(Boolean(false), Boolean(true)))")]
     fn composed_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();

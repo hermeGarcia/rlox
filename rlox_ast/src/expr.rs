@@ -211,6 +211,8 @@ pub enum BinaryOperator {
     Minus,
     Multiply,
     Division,
+    LogicAnd,
+    LogicOr,
 }
 
 #[derive(Clone, Debug, Copy)]

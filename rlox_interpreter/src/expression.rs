@@ -65,6 +65,14 @@ pub fn binary(expr: ExprId, id: BinaryId, ast: &Ast, runtime: &mut Runtime) -> R
     let binary = &ast[id];
 
     let lhs = deref_expression(binary.lhs, ast, runtime)?;
+
+    // Applying lazy evaluation if possible
+    match (binary.operator, &lhs) {
+        (BinaryOperator::LogicAnd, Value::Boolean(false)) => return Ok(Value::Boolean(false)),
+        (BinaryOperator::LogicOr, Value::Boolean(true)) => return Ok(Value::Boolean(true)),
+        _ => (),
+    }
+
     let rhs = deref_expression(binary.rhs, ast, runtime)?;
 
     let Ok(result) = apply_binary_operator(binary.operator, lhs, rhs) else {
@@ -91,6 +99,8 @@ fn apply_binary_operator(operator: BinaryOperator, lhs: Value, rhs: Value) -> Vs
         BinaryOperator::LessOrEqual => value_system::less_or_equal(lhs, rhs),
         BinaryOperator::Greater => value_system::greater(lhs, rhs),
         BinaryOperator::GreaterOrEqual => value_system::greater_or_equal(lhs, rhs),
+        BinaryOperator::LogicAnd => value_system::and(lhs, rhs),
+        BinaryOperator::LogicOr => value_system::or(lhs, rhs),
     }
 }
 
