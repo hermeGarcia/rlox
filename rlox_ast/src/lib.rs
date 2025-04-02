@@ -137,6 +137,7 @@ pub struct Ast {
     declaration_buffer: stmt::DeclarationVec,
     stmt_buffer: stmt::BlockVec,
     ifelse_buffer: stmt::IfElseVec,
+    while_buffer: stmt::WhileVec,
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
 }
 

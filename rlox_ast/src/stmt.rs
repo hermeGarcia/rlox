@@ -8,6 +8,7 @@ pub enum StmtKind {
     Declaration(DeclarationId),
     Block(BlockId),
     IfElse(IfElseId),
+    While(WhileId),
     Expr(Expr),
 }
 
@@ -206,6 +207,45 @@ impl AstElem<IfElse, Stmt> for Ast {
         Stmt {
             global_id: StmtId(global_id),
             kind: StmtKind::IfElse(inner),
+        }
+    }
+}
+
+define_id!(WhileId);
+pub(crate) type WhileVec = AstVec<While, WhileId>;
+
+#[derive(Clone, Debug)]
+pub struct While {
+    pub condition: Expr,
+    pub body: Stmt,
+}
+
+impl Index<WhileId> for Ast {
+    type Output = While;
+
+    fn index(&self, index: WhileId) -> &Self::Output {
+        &self.while_buffer[index]
+    }
+}
+
+impl IndexMut<WhileId> for Ast {
+    fn index_mut(&mut self, index: WhileId) -> &mut Self::Output {
+        &mut self.while_buffer[index]
+    }
+}
+
+impl AstElem<While, Stmt> for Ast {
+    fn add(&mut self, elem: While) -> Stmt {
+        let global_id = self.stmt_id;
+        let inner = WhileId::new(self.while_buffer.len());
+
+        self.while_buffer.push(elem);
+        self.stmt_metadata_buffer.push(None);
+        self.stmt_id += 1;
+
+        Stmt {
+            global_id: StmtId(global_id),
+            kind: StmtKind::While(inner),
         }
     }
 }

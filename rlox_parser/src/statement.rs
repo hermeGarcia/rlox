@@ -17,11 +17,32 @@ fn stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         TokenKind::Print => print_stmt(ctxt, ast),
         TokenKind::LeftBrace => block_stmt(ctxt, ast),
         TokenKind::If => if_else_stmt(ctxt, ast),
+        TokenKind::While => while_stmt(ctxt, ast),
         _ => expr_stmt(ctxt, ast),
     }
 }
 
-fn parse_else_branch(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Option<Stmt>> {
+fn while_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
+    let start_token = ctxt.consume();
+
+    let condition = expression::parse(ctxt, ast)?;
+    let body = block_stmt(ctxt, ast)?;
+
+    let stmt = ast.add(stmt::While {
+        condition,
+        body,
+    });
+
+    ast.attach(stmt.global_id(), SourceMetadata {
+        start: start_token.start,
+        end: ctxt.peek().start,
+        source: ctxt.src_id,
+    });
+
+    Ok(stmt)
+}
+
+fn else_branch(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Option<Stmt>> {
     if !ctxt.consume_if(TokenKind::Else) {
         return Ok(None);
     }
@@ -44,7 +65,7 @@ fn if_else_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 
     let condition = expression::parse(ctxt, ast)?;
     let if_branch = block_stmt(ctxt, ast)?;
-    let else_branch = parse_else_branch(ctxt, ast)?;
+    let else_branch = else_branch(ctxt, ast)?;
 
     let stmt = ast.add(stmt::IfElse {
         condition,
@@ -198,6 +219,7 @@ mod tests {
     use test_case::test_case;
 
     #[rustfmt::skip]
+    #[test_case(b"while true { 1 + 1; }", "While(Boolean(true),Block([\"Plus(Natural(1), Natural(1))\"]))")]
     #[test_case(b"if false { true; } else { false; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),Block([\"Boolean(false)\"]))")]
     #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)")]
     #[test_case(b"var a;", &format!("Declaration(a, None)"))]

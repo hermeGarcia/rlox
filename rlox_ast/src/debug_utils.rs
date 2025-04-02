@@ -54,6 +54,16 @@ pub fn fmt_stmt(stmt: Stmt, ast: &Ast) -> String {
             format!("IfElse({condition},{if_branch},{else_branch})")
         }
 
+        StmtKind::While(id) => {
+            let stmt = &ast[id];
+
+            let condition = fmt_expr(stmt.condition, ast);
+
+            let body = fmt_stmt(stmt.body, ast);
+
+            format!("While({condition},{body})")
+        }
+
         StmtKind::Print(id) => {
             let print = &ast[id];
             let operand = fmt_expr(print.expr, ast);
