@@ -34,8 +34,23 @@ fn for_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         Some(var_stmt(ctxt, ast)?)
     };
 
-    let condition = expression::parse(ctxt, ast)?;
-    ctxt.try_consume(TokenKind::Semicolon)?;
+    let condition = if matches!(ctxt.peek().kind, TokenKind::Semicolon) {
+        let token = ctxt.consume();
+        let condition = ast.add(true);
+
+        ast.attach(condition.global_id(), SourceMetadata {
+            start: token.start,
+            end: token.end,
+            source: ctxt.src_id,
+        });
+
+        condition
+    } else {
+        let condition = expression::parse(ctxt, ast)?;
+        ctxt.try_consume(TokenKind::Semicolon)?;
+
+        condition
+    };
 
     let increment = if ctxt.match_consume(TokenKind::RightParen) {
         None
@@ -145,26 +160,13 @@ fn if_else_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     let start_token = ctxt.consume();
 
-    let identifier = match ctxt.peek().kind {
-        TokenKind::Identifier => {
-            let token = ctxt.consume();
-            Ok(ast.add(&ctxt.src[token.start..token.end]))
-        }
+    let token = ctxt.try_consume(TokenKind::Identifier)?;
+    let identifier = ast.add(&ctxt.src[token.start..token.end]);
 
-        _ => Err(error::UnexpectedToken {
-            start: ctxt.peek().start,
-            end: ctxt.peek().end,
-            source: ctxt.src_id,
-            expected: vec![TokenKind::Identifier],
-        }),
-    }?;
-
-    let value = match ctxt.peek().kind {
-        TokenKind::Equal => {
-            ctxt.consume();
-            Some(expression::parse(ctxt, ast)?)
-        }
-        _ => None,
+    let value = if ctxt.match_consume(TokenKind::Equal) {
+        Some(expression::parse(ctxt, ast)?)
+    } else {
+        None
     };
 
     ctxt.try_consume(TokenKind::Semicolon)?;
@@ -251,6 +253,10 @@ mod tests {
     use test_case::test_case;
 
     #[rustfmt::skip]
+    #[test_case(b"for(;;){ 12; }", "While(Boolean(true),Block([\"Natural(12)\"]))")]
+    #[test_case(b"for(; x < 10;){ 12; }", "While(Less(x, Natural(10)),Block([\"Natural(12)\"]))")]
+    #[test_case(b"for(; x < 10; x = x + 1){ 12; }", "While(Less(x, Natural(10)),Block([\"Block([\\\"Natural(12)\\\"])\", \"Assign(x, Plus(x, Natural(1)))\"]))")]
+    #[test_case(b"for(var x = 0; x < 10; x = x + 1){ 12; }", "Block([\"Declaration(x, Natural(0))\", \"While(Less(x, Natural(10)),Block([\\\"Block([\\\\\\\"Natural(12)\\\\\\\"])\\\", \\\"Assign(x, Plus(x, Natural(1)))\\\"]))\"])")]
     #[test_case(b"while true { 1 + 1; }", "While(Boolean(true),Block([\"Plus(Natural(1), Natural(1))\"]))")]
     #[test_case(b"if false { true; } else { false; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),Block([\"Boolean(false)\"]))")]
     #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)")]

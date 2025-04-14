@@ -16,3 +16,10 @@ for(;x < 10;) {
     print x;
     x = x + 1;
 }
+
+print "No condition for loop";
+x = 0;
+for(;;) {
+    print x;
+    x = x + 1;
+}
