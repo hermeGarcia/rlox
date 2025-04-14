@@ -18,8 +18,68 @@ fn stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         TokenKind::LeftBrace => block_stmt(ctxt, ast),
         TokenKind::If => if_else_stmt(ctxt, ast),
         TokenKind::While => while_stmt(ctxt, ast),
+        TokenKind::For => for_stmt(ctxt, ast),
         _ => expr_stmt(ctxt, ast),
     }
+}
+
+fn for_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
+    let start_token = ctxt.consume();
+
+    ctxt.try_consume(TokenKind::LeftParen)?;
+
+    let declaration = if ctxt.match_consume(TokenKind::Semicolon) {
+        None
+    } else {
+        Some(var_stmt(ctxt, ast)?)
+    };
+
+    let condition = expression::parse(ctxt, ast)?;
+    ctxt.try_consume(TokenKind::Semicolon)?;
+
+    let increment = if ctxt.match_consume(TokenKind::RightParen) {
+        None
+    } else {
+        let expr = expression::parse(ctxt, ast)?;
+        let increment = ast.add(expr);
+        ast.attach(increment.global_id(), *ast.get(expr.global_id()));
+        ctxt.try_consume(TokenKind::RightParen)?;
+
+        Some(increment)
+    };
+
+    let body = match increment {
+        None => block_stmt(ctxt, ast)?,
+
+        Some(increment) => {
+            let inner_body = block_stmt(ctxt, ast)?;
+            let outer_body = ast.add([inner_body, increment].as_slice());
+            ast.attach(outer_body.global_id(), *ast.get(inner_body.global_id()));
+            outer_body
+        }
+    };
+
+    let metadata = SourceMetadata {
+        start: start_token.start,
+        end: ctxt.peek().start,
+        source: ctxt.src_id,
+    };
+
+    let while_stmt = ast.add(stmt::While {
+        condition,
+        body,
+    });
+
+    ast.attach(while_stmt.global_id(), metadata);
+
+    let Some(declaration) = declaration else {
+        return Ok(while_stmt);
+    };
+
+    let full_loop = ast.add([declaration, while_stmt].as_slice());
+    ast.attach(full_loop.global_id(), metadata);
+
+    Ok(full_loop)
 }
 
 fn while_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
@@ -43,7 +103,7 @@ fn while_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 }
 
 fn else_branch(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Option<Stmt>> {
-    if !ctxt.consume_if(TokenKind::Else) {
+    if !ctxt.match_consume(TokenKind::Else) {
         return Ok(None);
     }
 
@@ -107,14 +167,7 @@ fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         _ => None,
     };
 
-    if !ctxt.consume_if(TokenKind::Semicolon) {
-        return Err(Into::into(error::UnexpectedToken {
-            start: ctxt.peek().start,
-            end: ctxt.peek().end,
-            source: ctxt.src_id,
-            expected: vec![TokenKind::Semicolon],
-        }));
-    }
+    ctxt.try_consume(TokenKind::Semicolon)?;
 
     let stmt = ast.add(stmt::Declaration {
         identifier,
@@ -137,14 +190,7 @@ fn print_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         expr: expression::parse(ctxt, ast)?,
     };
 
-    if !ctxt.consume_if(TokenKind::Semicolon) {
-        return Err(Into::into(error::UnexpectedToken {
-            start: ctxt.peek().start,
-            end: ctxt.peek().end,
-            source: ctxt.src_id,
-            expected: vec![TokenKind::Semicolon],
-        }));
-    }
+    ctxt.try_consume(TokenKind::Semicolon)?;
 
     let stmt = ast.add(print_stmt);
 
@@ -160,14 +206,7 @@ fn print_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 fn expr_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     let expr = expression::parse(ctxt, ast)?;
 
-    if !ctxt.consume_if(TokenKind::Semicolon) {
-        return Err(Into::into(error::UnexpectedToken {
-            start: ctxt.peek().start,
-            end: ctxt.peek().end,
-            source: ctxt.src_id,
-            expected: vec![TokenKind::Semicolon],
-        }));
-    }
+    ctxt.try_consume(TokenKind::Semicolon)?;
 
     let stmt = ast.add(expr);
 
@@ -189,14 +228,7 @@ fn block_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         block_stmts.push(block_stmt);
     }
 
-    if !ctxt.consume_if(TokenKind::RightBrace) {
-        return Err(Into::into(error::UnexpectedToken {
-            start: ctxt.peek().start,
-            end: ctxt.peek().end,
-            source: ctxt.src_id,
-            expected: vec![TokenKind::RightBrace],
-        }));
-    }
+    ctxt.try_consume(TokenKind::RightBrace)?;
 
     let stmt = ast.add(block_stmts.as_slice());
 

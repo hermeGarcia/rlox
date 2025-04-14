@@ -49,7 +49,7 @@ fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 fn logic_or(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = logic_and(ctxt, ast)?;
 
-    if ctxt.consume_if(TokenKind::Or) {
+    if ctxt.match_consume(TokenKind::Or) {
         let binary_expr = expr::Binary {
             lhs: expr,
             rhs: logic_and(ctxt, ast)?,
@@ -74,7 +74,7 @@ fn logic_or(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 fn logic_and(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let mut expr = equality(ctxt, ast)?;
 
-    if ctxt.consume_if(TokenKind::And) {
+    if ctxt.match_consume(TokenKind::And) {
         let binary_expr = expr::Binary {
             lhs: expr,
             rhs: equality(ctxt, ast)?,

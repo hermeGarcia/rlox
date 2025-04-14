@@ -34,12 +34,25 @@ impl Context<'_> {
         self.current
     }
 
-    fn consume_if(&mut self, expected: TokenKind) -> bool {
+    fn match_consume(&mut self, expected: TokenKind) -> bool {
         if self.peek().kind == expected {
             self.consume();
             true
         } else {
             false
+        }
+    }
+
+    fn try_consume(&mut self, expected: TokenKind) -> ParserResult<Token> {
+        if self.peek().kind == expected {
+            Ok(self.consume())
+        } else {
+            Err(Into::into(error::UnexpectedToken {
+                start: self.peek().start,
+                end: self.peek().end,
+                source: self.src_id,
+                expected: vec![TokenKind::Semicolon],
+            }))
         }
     }
 
