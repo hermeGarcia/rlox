@@ -1,5 +1,5 @@
 use rlox_ast::expr::*;
-use rlox_ast::{Ast, AstProperty, Expr, ExprId, ExprKind, StrId};
+use rlox_ast::{Ast, AstProperty, StrId};
 
 use crate::RuntimeResult;
 use crate::error::{InvalidAssign, OperationNotDefined, VarNotFound};
@@ -21,18 +21,19 @@ pub fn expression(expr: Expr, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult
         ExprKind::Natural(inner) => Ok(Value::Natural(inner)),
         ExprKind::String(inner) => Ok(Value::String(ast[inner].into())),
 
-        ExprKind::Binary(inner) => binary(expr.global_id(), inner, ast, runtime),
-        ExprKind::Unary(inner) => unary(expr.global_id(), inner, ast, runtime),
-        ExprKind::Identifier(inner) => identifier(expr.global_id(), inner, ast, runtime),
-        ExprKind::Assign(inner) => assign(expr.global_id(), inner, ast, runtime),
+        ExprKind::Binary(inner) => binary(expr_node!(expr, inner), ast, runtime),
+        ExprKind::Unary(inner) => unary(expr_node!(expr, inner), ast, runtime),
+        ExprKind::Identifier(inner) => identifier(expr_node!(expr, inner), ast, runtime),
+        ExprKind::Assign(inner) => assign(expr_node!(expr, inner), ast, runtime),
+        ExprKind::Call(inner) => call(expr_node!(expr, inner), ast, runtime),
     }
 }
 
-pub fn assign(expr: ExprId, id: AssignId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
-    let assign = &ast[id];
+fn assign(node: ExprNode<AssignId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let assign = &ast[node.inner];
 
     let Value::Addr(address) = expression(assign.lhs, ast, runtime)? else {
-        let metadata = *ast.get(expr);
+        let metadata = *ast.get(node.expr_id);
         return Err(From::from(InvalidAssign {
             start: metadata.start,
             end: metadata.end,
@@ -47,9 +48,9 @@ pub fn assign(expr: ExprId, id: AssignId, ast: &Ast, runtime: &mut Runtime) -> R
     Ok(Value::Nil)
 }
 
-pub fn identifier(expr: ExprId, id: StrId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
-    let Some(value) = runtime.address(&ast[id]) else {
-        let metadata = ast.get(expr);
+fn identifier(node: ExprNode<StrId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let Some(value) = runtime.address(&ast[node.inner]) else {
+        let metadata = ast.get(node.expr_id);
 
         return Err(From::from(VarNotFound {
             start: metadata.start,
@@ -61,8 +62,8 @@ pub fn identifier(expr: ExprId, id: StrId, ast: &Ast, runtime: &mut Runtime) -> 
     Ok(Value::Addr(value))
 }
 
-pub fn binary(expr: ExprId, id: BinaryId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
-    let binary = &ast[id];
+fn binary(node: ExprNode<BinaryId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let binary = &ast[node.inner];
 
     let lhs = deref_expression(binary.lhs, ast, runtime)?;
 
@@ -76,7 +77,7 @@ pub fn binary(expr: ExprId, id: BinaryId, ast: &Ast, runtime: &mut Runtime) -> R
     let rhs = deref_expression(binary.rhs, ast, runtime)?;
 
     let Ok(result) = apply_binary_operator(binary.operator, lhs, rhs) else {
-        let metadata = *ast.get(expr);
+        let metadata = *ast.get(node.expr_id);
         return Err(From::from(OperationNotDefined {
             start: metadata.start,
             end: metadata.end,
@@ -111,13 +112,13 @@ fn apply_unary_operator(operator: UnaryOperator, operand: Value) -> VsResult<Val
     }
 }
 
-pub fn unary(expr: ExprId, id: UnaryId, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
-    let unary = &ast[id];
+fn unary(node: ExprNode<UnaryId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let unary = &ast[node.inner];
 
     let operand = deref_expression(unary.operand, ast, runtime)?;
 
     let Ok(result) = apply_unary_operator(unary.operator, operand) else {
-        let metadata = *ast.get(expr);
+        let metadata = *ast.get(node.expr_id);
 
         return Err(From::from(OperationNotDefined {
             start: metadata.start,
@@ -127,4 +128,17 @@ pub fn unary(expr: ExprId, id: UnaryId, ast: &Ast, runtime: &mut Runtime) -> Run
     };
 
     Ok(result)
+}
+
+fn call(node: ExprNode<CallId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+    let call = &ast[node.inner];
+
+    let _caller = deref_expression(call.caller, ast, runtime)?;
+
+    let mut args = Vec::with_capacity(call.arguments.len());
+    for arg in call.arguments.iter().copied() {
+        args.push(deref_expression(arg, ast, runtime)?);
+    }
+
+    todo!()
 }

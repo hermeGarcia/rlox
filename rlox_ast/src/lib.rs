@@ -3,8 +3,8 @@ pub mod debug_utils;
 pub mod expr;
 pub mod stmt;
 
-pub use expr::{Expr, ExprId, ExprKind};
-pub use stmt::{Stmt, StmtId, StmtKind};
+use expr::{Expr, ExprId};
+use stmt::{Stmt, StmtId};
 
 use rlox_source::SourceMetadata;
 use std::marker::PhantomData;
@@ -23,7 +23,7 @@ macro_rules! define_id {
         }
 
         impl $name {
-            pub fn new(inner: usize) -> $name {
+            fn new(inner: usize) -> $name {
                 $name(inner)
             }
         }
@@ -129,6 +129,7 @@ pub struct Ast {
     // Expression buffers
     assign_buffer: expr::AssignVec,
     binary_buffer: expr::BinaryVec,
+    call_buffer: expr::CallVec,
     unary_buffer: expr::UnaryVec,
     expr_metadata_buffer: AstVec<Option<SourceMetadata>, ExprId>,
 

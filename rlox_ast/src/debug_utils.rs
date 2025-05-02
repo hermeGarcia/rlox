@@ -1,4 +1,6 @@
-use crate::{Ast, Expr, ExprKind, Stmt, StmtKind};
+use crate::expr::ExprKind;
+use crate::stmt::StmtKind;
+use crate::{Ast, Expr, Stmt};
 
 pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
     match expr.kind() {
@@ -20,6 +22,19 @@ pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
             let unary = &ast[id];
             let operand = fmt_expr(unary.operand, ast);
             format!("{:?}({operand})", unary.operator)
+        }
+
+        ExprKind::Call(id) => {
+            let call = &ast[id];
+            let caller = fmt_expr(call.caller, ast);
+            let arguments: Vec<_> = call
+                .arguments
+                .iter()
+                .copied()
+                .map(|arg| fmt_expr(arg, ast))
+                .collect();
+
+            format!("Call({caller}, {arguments:?})")
         }
 
         ExprKind::Identifier(inner) | ExprKind::String(inner) => ast[inner].into(),

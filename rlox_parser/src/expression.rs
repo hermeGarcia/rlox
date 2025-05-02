@@ -1,6 +1,7 @@
 use rlox_ast::expr;
+use rlox_ast::expr::Expr;
 use rlox_ast::expr::{BinaryOperator, Identifier, LoxString};
-use rlox_ast::{Ast, AstElem, AstProperty, Expr};
+use rlox_ast::{Ast, AstElem, AstProperty};
 use rlox_source::SourceMetadata;
 
 use crate::error;
@@ -242,12 +243,12 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let first_token = ctxt.peek();
 
     let Some(operator) = match_and_consume(ctxt, unary_operator) else {
-        return primary(ctxt, ast);
+        return call(ctxt, ast);
     };
 
     let unary_expr = expr::Unary {
         operator,
-        operand: primary(ctxt, ast)?,
+        operand: call(ctxt, ast)?,
     };
 
     let operand_metadata = *ast.get(unary_expr.operand.global_id());
@@ -260,6 +261,44 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     });
 
     Ok(unary)
+}
+
+fn call_arguments(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Vec<Expr>> {
+    if matches!(ctxt.peek().kind, TokenKind::RightParen) {
+        return Ok(Vec::with_capacity(0));
+    }
+
+    let mut args = vec![expression(ctxt, ast)?];
+
+    while ctxt.match_consume(TokenKind::Comma) {
+        args.push(expression(ctxt, ast)?);
+    }
+
+    Ok(args)
+}
+
+fn call(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
+    let mut expr = primary(ctxt, ast)?;
+
+    while ctxt.match_consume(TokenKind::LeftParen) {
+        let call_expr = expr::Call {
+            caller: expr,
+            arguments: call_arguments(ctxt, ast)?,
+        };
+
+        let caller_metadata: SourceMetadata = *ast.get(call_expr.caller.global_id());
+        let end_of_call = ctxt.try_consume(TokenKind::RightParen)?;
+
+        expr = ast.add(call_expr);
+
+        ast.attach(expr.global_id(), SourceMetadata {
+            start: caller_metadata.start,
+            end: end_of_call.end,
+            source: ctxt.src_id,
+        });
+    }
+
+    Ok(expr)
 }
 
 fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
@@ -339,13 +378,15 @@ fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 }
 
 pub fn primitive_type<T: std::str::FromStr>(ctxt: &Context, token: Token) -> ParserResult<T> {
-    String::from_utf8_lossy(&ctxt.src[token.start..token.end]).parse().map_err(|_| {
-        Into::into(error::TypeCouldNotBeParsed {
-            start: token.start,
-            end: token.end,
-            source: ctxt.src_id,
+    String::from_utf8_lossy(&ctxt.src[token.start..token.end])
+        .parse()
+        .map_err(|_| {
+            Into::into(error::TypeCouldNotBeParsed {
+                start: token.start,
+                end: token.end,
+                source: ctxt.src_id,
+            })
         })
-    })
 }
 
 fn match_and_consume<MatcherFn, T>(ctxt: &mut Context, matcher: MatcherFn) -> Option<T>
@@ -370,6 +411,8 @@ mod tests {
     use rlox_source::Source;
     use test_case::test_case;
 
+    #[rustfmt::skip]
+    #[test_case(b"\"a string\"", "a string")]
     #[test_case(b"var123", "var123")]
     #[test_case(b"my_var", "my_var")]
     #[test_case(b"var_a = 3", &format!("Assign(var_a, {:?})", ExprKind::Natural(3)))]
@@ -379,6 +422,9 @@ mod tests {
     #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)))]
     #[test_case(b"true and false", &format!("{:?}({:?}, {:?})", BinaryOperator::LogicAnd, ExprKind::Boolean(true), ExprKind::Boolean(false)))]
     #[test_case(b"true or false and true", "LogicOr(Boolean(true), LogicAnd(Boolean(false), Boolean(true)))")]
+    #[test_case(b"my_cool_function()", "Call(my_cool_function, [])")]
+    #[test_case(b"function_with_args(12, 3, \"some string\")", "Call(function_with_args, [\"Natural(12)\", \"Natural(3)\", \"some string\"])")]
+    #[test_case(b"my_cool_function(12)(3)", "Call(Call(my_cool_function, [\"Natural(12)\"]), [\"Natural(3)\"])")]
     fn composed_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();

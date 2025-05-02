@@ -74,9 +74,9 @@ impl<'a> Runtime<'a> {
     }
 
     pub fn leave_block(&mut self) {
-        let Some(env) = self.var_env.pop() else {
-            panic!("Scoping was not properly managed")
-        };
+        // Unwrapping should be safe since a valid lox
+        // program must have balanced braces.
+        let env = self.var_env.pop().unwrap();
 
         self.free_address = env.start;
     }

@@ -1,5 +1,6 @@
 use rlox_ast::stmt;
-use rlox_ast::{Ast, AstElem, AstProperty, Stmt};
+use rlox_ast::stmt::Stmt;
+use rlox_ast::{Ast, AstElem, AstProperty};
 use rlox_source::SourceMetadata;
 
 use crate::error;

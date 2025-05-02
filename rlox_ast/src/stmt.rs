@@ -2,6 +2,23 @@ use std::ops::{Index, IndexMut};
 
 use crate::{Ast, AstElem, AstIndex, AstVec, Expr, StrId, define_id};
 
+pub struct StmtNode<Inner> {
+    pub stmt_id: StmtId,
+    pub inner: Inner,
+}
+
+#[macro_export]
+macro_rules! stmt_node {
+    ($global:expr, $inner: expr) => {
+        StmtNode {
+            stmt_id: $global.global_id(),
+            inner: $inner,
+        }
+    };
+}
+
+pub use stmt_node;
+
 #[derive(Clone, Copy, Debug)]
 pub enum StmtKind {
     Print(PrintId),

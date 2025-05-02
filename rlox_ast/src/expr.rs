@@ -2,16 +2,34 @@ use std::ops::{Index, IndexMut};
 
 use crate::{Ast, AstElem, AstIndex, AstVec, StrId, define_id};
 
+pub struct ExprNode<Inner> {
+    pub expr_id: ExprId,
+    pub inner: Inner,
+}
+
+#[macro_export]
+macro_rules! expr_node {
+    ($global:expr, $inner: expr) => {
+        ExprNode {
+            expr_id: $global.global_id(),
+            inner: $inner,
+        }
+    };
+}
+
+pub use expr_node;
+
 #[derive(Clone, Copy, Debug)]
 pub enum ExprKind {
     Assign(AssignId),
     Binary(BinaryId),
+    Call(CallId),
     Unary(UnaryId),
     Identifier(StrId),
+    String(StrId),
     Natural(u64),
     Decimal(f64),
     Boolean(bool),
-    String(StrId),
     Nil,
 }
 
@@ -293,6 +311,45 @@ impl AstElem<Unary, Expr> for Ast {
         Expr {
             global_id: ExprId(global_id),
             kind: ExprKind::Unary(kind),
+        }
+    }
+}
+
+define_id!(CallId);
+pub(crate) type CallVec = AstVec<Call, CallId>;
+
+#[derive(Clone, Debug)]
+pub struct Call {
+    pub caller: Expr,
+    pub arguments: Vec<Expr>,
+}
+
+impl Index<CallId> for Ast {
+    type Output = Call;
+
+    fn index(&self, index: CallId) -> &Self::Output {
+        &self.call_buffer[index]
+    }
+}
+
+impl IndexMut<CallId> for Ast {
+    fn index_mut(&mut self, index: CallId) -> &mut Self::Output {
+        &mut self.call_buffer[index]
+    }
+}
+
+impl AstElem<Call, Expr> for Ast {
+    fn add(&mut self, elem: Call) -> Expr {
+        let global_id = self.expr_id;
+        let kind = CallId::new(self.call_buffer.len());
+
+        self.call_buffer.push(elem);
+        self.expr_metadata_buffer.push(None);
+        self.expr_id += 1;
+
+        Expr {
+            global_id: ExprId(global_id),
+            kind: ExprKind::Call(kind),
         }
     }
 }

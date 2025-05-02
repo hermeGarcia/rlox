@@ -1,6 +1,7 @@
+use rlox_ast::Ast;
 use rlox_ast::AstProperty;
+use rlox_ast::expr::Expr;
 use rlox_ast::stmt::*;
-use rlox_ast::{Ast, Expr, Stmt, StmtKind};
 
 use crate::RuntimeResult;
 use crate::error;
@@ -12,17 +13,17 @@ type StmtResult = RuntimeResult<()>;
 
 pub fn eval<'a>(stmt: Stmt, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     match stmt.kind() {
-        StmtKind::Expr(inner) => expr_stmt(inner, ast, runtime),
-        StmtKind::Print(inner) => print(inner, ast, runtime),
-        StmtKind::Declaration(inner) => declaration(inner, ast, runtime),
-        StmtKind::Block(inner) => block(inner, ast, runtime),
-        StmtKind::IfElse(inner) => if_else(stmt.global_id(), inner, ast, runtime),
-        StmtKind::While(inner) => while_stmt(stmt.global_id(), inner, ast, runtime),
+        StmtKind::Expr(inner) => expr_stmt(stmt_node!(stmt, inner), ast, runtime),
+        StmtKind::Print(inner) => print(stmt_node!(stmt, inner), ast, runtime),
+        StmtKind::Declaration(inner) => declaration(stmt_node!(stmt, inner), ast, runtime),
+        StmtKind::Block(inner) => block(stmt_node!(stmt, inner), ast, runtime),
+        StmtKind::IfElse(inner) => if_else(stmt_node!(stmt, inner), ast, runtime),
+        StmtKind::While(inner) => while_stmt(stmt_node!(stmt, inner), ast, runtime),
     }
 }
 
-fn declaration<'a>(id: DeclarationId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
-    let declaration = &ast[id];
+fn declaration<'a>(node: StmtNode<DeclarationId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
+    let declaration = &ast[node.inner];
 
     let value = match declaration.value {
         None => Value::Nil,
@@ -34,16 +35,17 @@ fn declaration<'a>(id: DeclarationId, ast: &'a Ast, runtime: &mut Runtime<'a>) -
     Ok(())
 }
 
-fn print<'a>(id: PrintId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
-    let expr_value = expression::deref_expression(ast[id].expr, ast, runtime)?;
+fn print<'a>(node: StmtNode<PrintId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
+    let stmt = &ast[node.inner];
+    let expr_value = expression::deref_expression(stmt.expr, ast, runtime)?;
 
     println!("{expr_value}");
 
     Ok(())
 }
 
-fn block<'a>(id: BlockId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
-    let block = &ast[id];
+fn block<'a>(node: StmtNode<BlockId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
+    let block = &ast[node.inner];
 
     runtime.enter_block();
 
@@ -56,11 +58,11 @@ fn block<'a>(id: BlockId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult
     Ok(())
 }
 
-fn if_else<'a>(global_id: StmtId, id: IfElseId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
-    let stmt = &ast[id];
+fn if_else<'a>(node: StmtNode<IfElseId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
+    let stmt = &ast[node.inner];
 
     let catch = |unexpected_value: Value| -> error::RuntimeError {
-        let stmt_metadata = ast.get(global_id);
+        let stmt_metadata = ast.get(node.stmt_id);
         let condition_metadata = ast.get(stmt.condition.global_id());
 
         From::from(error::UnexpectedValue {
@@ -83,11 +85,11 @@ fn if_else<'a>(global_id: StmtId, id: IfElseId, ast: &'a Ast, runtime: &mut Runt
     }
 }
 
-fn while_stmt<'a>(global_id: StmtId, id: WhileId, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
-    let stmt = &ast[id];
+fn while_stmt<'a>(node: StmtNode<WhileId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
+    let stmt = &ast[node.inner];
 
     let catch = |unexpected_value: Value| -> error::RuntimeError {
-        let stmt_metadata = ast.get(global_id);
+        let stmt_metadata = ast.get(node.stmt_id);
         let condition_metadata = ast.get(stmt.condition.global_id());
 
         From::from(error::UnexpectedValue {
@@ -109,7 +111,7 @@ fn while_stmt<'a>(global_id: StmtId, id: WhileId, ast: &'a Ast, runtime: &mut Ru
     }
 }
 
-fn expr_stmt(expr_id: Expr, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
-    expression::deref_expression(expr_id, ast, runtime)?;
+fn expr_stmt(node: StmtNode<Expr>, ast: &Ast, runtime: &mut Runtime) -> StmtResult {
+    expression::deref_expression(node.inner, ast, runtime)?;
     Ok(())
 }

@@ -123,9 +123,9 @@ pub fn add(lhs: Value, rhs: Value) -> VsResult<Value> {
     match cast_to_common(lhs, rhs)? {
         (Value::Nil, _) => Ok(Value::Nil),
         (_, Value::Nil) => Ok(Value::Nil),
-        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs + rhs)),
+        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs.wrapping_add(rhs))),
+        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs.wrapping_add(rhs))),
         (Value::Decimal(lhs), Value::Decimal(rhs)) => Ok(Value::Decimal(lhs + rhs)),
-        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs + rhs)),
         _ => Err(OperationNotDefined),
     }
 }
@@ -134,9 +134,9 @@ pub fn sub(lhs: Value, rhs: Value) -> VsResult<Value> {
     match cast_to_common(lhs, rhs)? {
         (Value::Nil, _) => Ok(Value::Nil),
         (_, Value::Nil) => Ok(Value::Nil),
-        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs - rhs)),
+        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs.wrapping_sub(rhs))),
+        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs.wrapping_sub(rhs))),
         (Value::Decimal(lhs), Value::Decimal(rhs)) => Ok(Value::Decimal(lhs - rhs)),
-        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs - rhs)),
         _ => Err(OperationNotDefined),
     }
 }
@@ -145,9 +145,9 @@ pub fn mul(lhs: Value, rhs: Value) -> VsResult<Value> {
     match cast_to_common(lhs, rhs)? {
         (Value::Nil, _) => Ok(Value::Nil),
         (_, Value::Nil) => Ok(Value::Nil),
-        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs * rhs)),
+        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs.wrapping_mul(rhs))),
+        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs.wrapping_mul(rhs))),
         (Value::Decimal(lhs), Value::Decimal(rhs)) => Ok(Value::Decimal(lhs * rhs)),
-        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs * rhs)),
         _ => Err(OperationNotDefined),
     }
 }
@@ -158,7 +158,7 @@ pub fn div(lhs: Value, rhs: Value) -> VsResult<Value> {
         (_, Value::Nil) => Ok(Value::Nil),
         (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs / rhs)),
         (Value::Decimal(lhs), Value::Decimal(rhs)) => Ok(Value::Decimal(lhs / rhs)),
-        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs / rhs)),
+        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs.wrapping_div(rhs))),
         _ => Err(OperationNotDefined),
     }
 }
