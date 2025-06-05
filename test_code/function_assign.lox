@@ -1,0 +1,5 @@
+var my_print = println;
+var my_other_print = println;
+
+my_print("this prints");
+my_other_print("this also prints");

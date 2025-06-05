@@ -254,19 +254,19 @@ mod tests {
     use test_case::test_case;
 
     #[rustfmt::skip]
-    #[test_case(b"for(;;){ 12; }", "While(Boolean(true),Block([\"Natural(12)\"]))")]
-    #[test_case(b"for(; x < 10;){ 12; }", "While(Less(x, Natural(10)),Block([\"Natural(12)\"]))")]
-    #[test_case(b"for(; x < 10; x = x + 1){ 12; }", "While(Less(x, Natural(10)),Block([\"Block([\\\"Natural(12)\\\"])\", \"Assign(x, Plus(x, Natural(1)))\"]))")]
-    #[test_case(b"for(var x = 0; x < 10; x = x + 1){ 12; }", "Block([\"Declaration(x, Natural(0))\", \"While(Less(x, Natural(10)),Block([\\\"Block([\\\\\\\"Natural(12)\\\\\\\"])\\\", \\\"Assign(x, Plus(x, Natural(1)))\\\"]))\"])")]
-    #[test_case(b"while true { 1 + 1; }", "While(Boolean(true),Block([\"Plus(Natural(1), Natural(1))\"]))")]
-    #[test_case(b"if false { true; } else { false; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),Block([\"Boolean(false)\"]))")]
-    #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)")]
-    #[test_case(b"var a;", &format!("Declaration(a, None)"))]
-    #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", ExprKind::Natural(2)))]
-    #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)))]
-    #[test_case(b"print -2;", &format!("Print({:?}({:?}))", UnaryOperator::Minus, ExprKind::Natural(2)))]
-    #[test_case(b"print 12 * 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)))]
-    #[test_case(b"print 12 + 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)))]
+    #[test_case(b"for(;;){ 12; }", "While(Boolean(true),Block([\"Natural(12)\"]))"; "empty for")]
+    #[test_case(b"for(; x < 10;){ 12; }", "While(Less(x, Natural(10)),Block([\"Natural(12)\"]))"; "for only condition")]
+    #[test_case(b"for(; x < 10; x = x + 1){ 12; }", "While(Less(x, Natural(10)),Block([\"Block([\\\"Natural(12)\\\"])\", \"Assign(x, Plus(x, Natural(1)))\"]))"; "for no declaration")]
+    #[test_case(b"for(var x = 0; x < 10; x = x + 1){ 12; }", "Block([\"Declaration(x, Natural(0))\", \"While(Less(x, Natural(10)),Block([\\\"Block([\\\\\\\"Natural(12)\\\\\\\"])\\\", \\\"Assign(x, Plus(x, Natural(1)))\\\"]))\"])"; "full for")]
+    #[test_case(b"while true { 1 + 1; }", "While(Boolean(true),Block([\"Plus(Natural(1), Natural(1))\"]))"; "while expression")]
+    #[test_case(b"if false { true; } else { false; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),Block([\"Boolean(false)\"]))"; "if with else")]
+    #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)"; "simple if")]
+    #[test_case(b"var a;", &format!("Declaration(a, None)"); "var declaration without assignment")]
+    #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", ExprKind::Natural(2)); "var declaration with assignment")]
+    #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)); "print complex arith expression")]
+    #[test_case(b"print -2;", &format!("Print({:?}({:?}))", UnaryOperator::Minus, ExprKind::Natural(2)); "print neg expression")]
+    #[test_case(b"print 12 * 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)); "print mul expression")]
+    #[test_case(b"print 12 + 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)); "print add expression")]
     fn stmt_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();

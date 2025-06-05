@@ -1,55 +1,55 @@
 
 if 1 + 2 == 3 {
-    print true;
+    println(true);
 }
 
 
 if 1 + 2 != 3 {
-    print false;
+    println(false);
 } else {
-    print true;
+    println(true);
 }
 
 
 var test = 11;
 
 if test > 1 and test < 20 {
-    print "In (1, 20)";
+    println("In (1, 20)");
 }
 
 if (test < 20 and test > 11) or test == 11 {
-        print "In [11, 20)";
+        println("In [11, 20)");
 }
 
 if false and "bomb" {
-    print "no bomb";
+    println("no bomb");
 }
 
 if true or "bomb" {
-    print "lazylazy";
+    println("lazylazy");
 }
 
 
 if test == 1 {
-    print "Is one";
+    println("Is one");
 } else if test == 2 {
-    print "Is two";
+    println ("Is two");
 } else if test == 3 {
-    print "Is three";
+    println("Is three");
 } else if test == 4 {
-    print "Is four";
+    println("Is four");
 } else if test == 5 {
-    print "Is five";
+    println("Is five");
 } else if test == 6 {
-    print "Is six";
+    println("Is six");
 } else if test == 7 {
-    print "Is seven";
+    println("Is seven");
 } else if test == 8 {
-    print "Is eight";
+    println("Is eight");
 } else if test == 9 {
-    print "Is nine";
+    println "Is nine";
 } else if test == 10 {
-    print "Is ten";
+    println("Is ten");
 } else {
-    print "What are you!?";
+    println("What are you!?");
 }

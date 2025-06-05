@@ -2,6 +2,7 @@ pub mod value_system;
 
 mod error;
 mod expression;
+mod native_functions;
 mod runtime;
 mod statement;
 

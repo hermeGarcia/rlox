@@ -1,23 +1,23 @@
 
-print "Full for loop";
+println("Full for loop");
 for(var x = 0; x < 10; x = x + 1) {
-    print x;
+    println(x);
 }
 
-print "No declaration for loop";
+println("No declaration for loop");
 var x = 0;
 for(;x < 10; x = x + 1) {
-    print x;
+    println(x);
 }
 
-print "Only condition for loop";
+println("Only condition for loop");
 x = 0;
 for(;x < 10;) {
-    print x;
+    println(x);
     x = x + 1;
 }
 
-print "No condition for loop";
+println("No condition for loop");
 x = 0;
 for(;;) {
     print x;

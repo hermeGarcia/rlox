@@ -4,22 +4,22 @@ var x = "1";
 {
     var x = "2";
     // Expect 2
-    print x;
+    println(x);
 
     {
         var x = "3";
         // Expect 3
-        print x;
+        println(x);
     }
 
     var y = "12";
     // Expect 12
-    print  y;
+    println(y);
 
 }
 
 var y = "14";
 // Expect 14
-print y;
+println(y);
 // Expect 1
-print x;
+println(x);

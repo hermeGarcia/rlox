@@ -61,53 +61,48 @@ fn block<'a>(node: StmtNode<BlockId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -
 fn if_else<'a>(node: StmtNode<IfElseId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     let stmt = &ast[node.inner];
 
-    let catch = |unexpected_value: Value| -> error::RuntimeError {
+    let Value::Boolean(value) = expression::deref_expression(stmt.condition, ast, runtime)? else {
         let stmt_metadata = ast.get(node.stmt_id);
         let condition_metadata = ast.get(stmt.condition.global_id());
 
-        From::from(error::UnexpectedValue {
+        return Err(From::from(error::UnexpectedValue {
             start: stmt_metadata.start,
             end: condition_metadata.end,
             source: stmt_metadata.source,
-            value: unexpected_value.to_string(),
-        })
+            expected: "Boolean".to_string(),
+        }));
     };
 
-    match expression::deref_expression(stmt.condition, ast, runtime)? {
-        Value::Boolean(true) => eval(stmt.if_branch, ast, runtime),
-
-        Value::Boolean(false) => match stmt.else_branch {
-            Some(branch) => eval(branch, ast, runtime),
-            None => Ok(()),
-        },
-
-        unexpected_value => Err(catch(unexpected_value)),
+    if value {
+        eval(stmt.if_branch, ast, runtime)
+    } else if let Some(branch) = stmt.else_branch {
+        eval(branch, ast, runtime)
+    } else {
+        Ok(())
     }
 }
 
 fn while_stmt<'a>(node: StmtNode<WhileId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     let stmt = &ast[node.inner];
 
-    let catch = |unexpected_value: Value| -> error::RuntimeError {
-        let stmt_metadata = ast.get(node.stmt_id);
-        let condition_metadata = ast.get(stmt.condition.global_id());
-
-        From::from(error::UnexpectedValue {
-            start: stmt_metadata.start,
-            end: condition_metadata.end,
-            source: stmt_metadata.source,
-            value: unexpected_value.to_string(),
-        })
-    };
-
     loop {
-        match expression::deref_expression(stmt.condition, ast, runtime)? {
-            Value::Boolean(true) => eval(stmt.body, ast, runtime)?,
+        let Value::Boolean(value) = expression::deref_expression(stmt.condition, ast, runtime)? else {
+            let stmt_metadata = ast.get(node.stmt_id);
+            let condition_metadata = ast.get(stmt.condition.global_id());
 
-            Value::Boolean(false) => break Ok(()),
+            return Err(From::from(error::UnexpectedValue {
+                start: stmt_metadata.start,
+                end: condition_metadata.end,
+                source: stmt_metadata.source,
+                expected: "Boolean".to_string(),
+            }));
+        };
 
-            unexpected_value => break Err(catch(unexpected_value)),
+        if !value {
+            return Ok(());
         }
+
+        eval(stmt.body, ast, runtime)?;
     }
 }
 

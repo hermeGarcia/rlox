@@ -412,19 +412,19 @@ mod tests {
     use test_case::test_case;
 
     #[rustfmt::skip]
-    #[test_case(b"\"a string\"", "a string")]
-    #[test_case(b"var123", "var123")]
-    #[test_case(b"my_var", "my_var")]
-    #[test_case(b"var_a = 3", &format!("Assign(var_a, {:?})", ExprKind::Natural(3)))]
-    #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)))]
-    #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, ExprKind::Natural(2)))]
-    #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)))]
-    #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)))]
-    #[test_case(b"true and false", &format!("{:?}({:?}, {:?})", BinaryOperator::LogicAnd, ExprKind::Boolean(true), ExprKind::Boolean(false)))]
-    #[test_case(b"true or false and true", "LogicOr(Boolean(true), LogicAnd(Boolean(false), Boolean(true)))")]
-    #[test_case(b"my_cool_function()", "Call(my_cool_function, [])")]
-    #[test_case(b"function_with_args(12, 3, \"some string\")", "Call(function_with_args, [\"Natural(12)\", \"Natural(3)\", \"some string\"])")]
-    #[test_case(b"my_cool_function(12)(3)", "Call(Call(my_cool_function, [\"Natural(12)\"]), [\"Natural(3)\"])")]
+    #[test_case(b"\"a string\"", "a string"; "string literal")]
+    #[test_case(b"var123", "var123"; "var name with numbers")]
+    #[test_case(b"my_var", "my_var"; "var use underscore")]
+    #[test_case(b"var_a = 3", &format!("Assign(var_a, {:?})", ExprKind::Natural(3)); "var assignment")]
+    #[test_case(b"-12 + (2)", &format!("{:?}({:?}({:?}), {:?})", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)); "complex arith expression")]
+    #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, ExprKind::Natural(2)); "neg expression")]
+    #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)); "mul expression")]
+    #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)); "add expression")]
+    #[test_case(b"true and false", &format!("{:?}({:?}, {:?})", BinaryOperator::LogicAnd, ExprKind::Boolean(true), ExprKind::Boolean(false)); "simple boolean expression")]
+    #[test_case(b"true or false and true", "LogicOr(Boolean(true), LogicAnd(Boolean(false), Boolean(true)))"; "nested boolean expression")]
+    #[test_case(b"my_cool_function()", "Call(my_cool_function, [])"; "fn with no args")]
+    #[test_case(b"function_with_args(12, 3, \"some string\")", "Call(function_with_args, [\"Natural(12)\", \"Natural(3)\", \"some string\"])"; "fn with several args")]
+    #[test_case(b"my_cool_function(12)(3)", "Call(Call(my_cool_function, [\"Natural(12)\"]), [\"Natural(3)\"])"; "concat fn calls")]
     fn composed_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();
@@ -437,11 +437,11 @@ mod tests {
         assert_eq!(&source[metadata.start..metadata.end], source);
     }
 
-    #[test_case(b"12.34", ExprKind::Decimal(12.34))]
-    #[test_case(b"12", ExprKind::Natural(12))]
-    #[test_case(b"nil", ExprKind::Nil)]
-    #[test_case(b"true", ExprKind::Boolean(true))]
-    #[test_case(b"false", ExprKind::Boolean(false))]
+    #[test_case(b"12.34", ExprKind::Decimal(12.34); "parsing decimal")]
+    #[test_case(b"12", ExprKind::Natural(12); "parsing natural")]
+    #[test_case(b"nil", ExprKind::Nil; "parsing nil")]
+    #[test_case(b"true", ExprKind::Boolean(true); "parsing true")]
+    #[test_case(b"false", ExprKind::Boolean(false); "parsing false")]
     fn primary_parsing(source: &[u8], expected: ExprKind) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();

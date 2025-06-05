@@ -1,31 +1,31 @@
 
-print "OR";
+println("OR");
 
 if (false or false) == false {
-    print "     0    0   0";
+    println("     0    0   0");
 }
 if (false or true) == true {
-    print "     0    1   1";
+    println("     0    1   1");
 }
 if (true or false) == true {
-    print "     1    0   1";
+    println("     1    0   1");
 }
 if (true or true) == true {
-    print "     1    1   1";
+    println("     1    1   1");
 }
 
-print "";
+println "";
 
-print "AND";
+println "AND";
 if (false and false) == false {
-    print "     0    0   0";
+    println("     0    0   0");
 }
 if (false and true) == false {
-    print "     0    1   0";
+    println("     0    1   0");
 }
 if (true and false) == false {
-    print "     1    0   0";
+    println("     1    0   0");
 }
 if (true and true) == true {
-    print "     1    1   1";
+    println("     1    1   1");
 }

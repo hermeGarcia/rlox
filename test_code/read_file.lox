@@ -1,0 +1,3 @@
+var x = read_file("/Users/herme/RustWorkspace/rlox/rustfmt.toml");
+
+println(x);

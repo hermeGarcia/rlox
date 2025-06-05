@@ -1,3 +1,4 @@
+use crate::native_functions::NativeFn;
 use crate::runtime::MemAddr;
 
 pub type VsResult<T> = Result<T, OperationNotDefined>;
@@ -11,6 +12,7 @@ pub enum Value {
     Signed(i64),
     String(String),
     Addr(MemAddr),
+    Fn(NativeFn),
 }
 
 impl std::fmt::Display for Value {
@@ -23,6 +25,7 @@ impl std::fmt::Display for Value {
             Value::Signed(inner) => inner.fmt(f),
             Value::Addr(inner) => inner.fmt(f),
             Value::String(inner) => inner.fmt(f),
+            Value::Fn(inner) => inner.name.fmt(f),
         }
     }
 }
@@ -100,7 +103,9 @@ pub fn equal(lhs: Value, rhs: Value) -> VsResult<Value> {
 }
 
 pub fn not_equal(lhs: Value, rhs: Value) -> VsResult<Value> {
-    inner_equal(lhs, rhs).map(std::ops::Not::not).map(Value::Boolean)
+    inner_equal(lhs, rhs)
+        .map(std::ops::Not::not)
+        .map(Value::Boolean)
 }
 
 pub fn less(lhs: Value, rhs: Value) -> VsResult<Value> {

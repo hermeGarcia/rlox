@@ -3,6 +3,6 @@
 var index = 1;
 
 while index <= 10 {
-    print index;
+    println(index);
     index = index + 1;
 }

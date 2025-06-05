@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::native_functions;
 use crate::value_system::Value;
 
 pub type MemAddr = usize;
@@ -28,13 +29,25 @@ pub struct Runtime<'a> {
     pub memory: Vec<Value>,
 }
 
+impl Default for Runtime<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> Runtime<'a> {
     pub fn new() -> Runtime<'a> {
-        Runtime {
+        let mut runtime = Runtime {
             free_address: 0,
             memory: vec![Value::Nil; MEMORY_SIZE],
             var_env: vec![Env::default()],
+        };
+
+        for native_fn in native_functions::REGISTRY {
+            runtime.insert(native_fn.name, Value::Fn(*native_fn));
         }
+
+        runtime
     }
 
     pub fn address(&self, id: &str) -> Option<MemAddr> {

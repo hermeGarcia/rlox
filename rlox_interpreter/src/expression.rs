@@ -2,7 +2,8 @@ use rlox_ast::expr::*;
 use rlox_ast::{Ast, AstProperty, StrId};
 
 use crate::RuntimeResult;
-use crate::error::{InvalidAssign, OperationNotDefined, VarNotFound};
+use crate::error;
+use crate::native_functions::NativeFnContext;
 use crate::runtime::Runtime;
 use crate::value_system::{self, Value, VsResult};
 
@@ -34,7 +35,8 @@ fn assign(node: ExprNode<AssignId>, ast: &Ast, runtime: &mut Runtime) -> Runtime
 
     let Value::Addr(address) = expression(assign.lhs, ast, runtime)? else {
         let metadata = *ast.get(node.expr_id);
-        return Err(From::from(InvalidAssign {
+
+        return Err(From::from(error::InvalidAssign {
             start: metadata.start,
             end: metadata.end,
             source: metadata.source,
@@ -52,7 +54,7 @@ fn identifier(node: ExprNode<StrId>, ast: &Ast, runtime: &mut Runtime) -> Runtim
     let Some(value) = runtime.address(&ast[node.inner]) else {
         let metadata = ast.get(node.expr_id);
 
-        return Err(From::from(VarNotFound {
+        return Err(From::from(error::VarNotFound {
             start: metadata.start,
             end: metadata.end,
             source: metadata.source,
@@ -78,7 +80,7 @@ fn binary(node: ExprNode<BinaryId>, ast: &Ast, runtime: &mut Runtime) -> Runtime
 
     let Ok(result) = apply_binary_operator(binary.operator, lhs, rhs) else {
         let metadata = *ast.get(node.expr_id);
-        return Err(From::from(OperationNotDefined {
+        return Err(From::from(error::OperationNotDefined {
             start: metadata.start,
             end: metadata.end,
             source: metadata.source,
@@ -120,7 +122,7 @@ fn unary(node: ExprNode<UnaryId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeRe
     let Ok(result) = apply_unary_operator(unary.operator, operand) else {
         let metadata = *ast.get(node.expr_id);
 
-        return Err(From::from(OperationNotDefined {
+        return Err(From::from(error::OperationNotDefined {
             start: metadata.start,
             end: metadata.end,
             source: metadata.source,
@@ -133,12 +135,26 @@ fn unary(node: ExprNode<UnaryId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeRe
 fn call(node: ExprNode<CallId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
     let call = &ast[node.inner];
 
-    let _caller = deref_expression(call.caller, ast, runtime)?;
+    let Value::Fn(callee) = deref_expression(call.caller, ast, runtime)? else {
+        let metadata = ast.get(node.expr_id);
 
-    let mut args = Vec::with_capacity(call.arguments.len());
+        return Err(From::from(error::UnexpectedValue {
+            start: metadata.start,
+            end: metadata.end,
+            source: metadata.source,
+            expected: "Fn".to_string(),
+        }));
+    };
+
+    let mut context = NativeFnContext {
+        ast,
+        args: Vec::with_capacity(call.arguments.len()),
+        caller: node.expr_id,
+    };
+
     for arg in call.arguments.iter().copied() {
-        args.push(deref_expression(arg, ast, runtime)?);
+        context.args.push(deref_expression(arg, ast, runtime)?);
     }
 
-    todo!()
+    (callee.function)(context, runtime)
 }

@@ -7,6 +7,7 @@ pub enum RuntimeError {
     VarNotFound(VarNotFound),
     InvalidAssign(InvalidAssign),
     UnexpectedValue(UnexpectedValue),
+    WrongNumberOfArgs(WrongNumberOfArgs),
 }
 
 impl From<RuntimeError> for Error {
@@ -16,6 +17,7 @@ impl From<RuntimeError> for Error {
             RuntimeError::OperationNotDefined(e) => e.into(),
             RuntimeError::InvalidAssign(e) => e.into(),
             RuntimeError::UnexpectedValue(e) => e.into(),
+            RuntimeError::WrongNumberOfArgs(e) => e.into(),
         }
     }
 }
@@ -106,7 +108,7 @@ pub struct UnexpectedValue {
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) source: Source,
-    pub(crate) value: String,
+    pub(crate) expected: String,
 }
 
 impl From<UnexpectedValue> for RuntimeError {
@@ -117,7 +119,36 @@ impl From<UnexpectedValue> for RuntimeError {
 
 impl Message for UnexpectedValue {
     fn description(&self) -> String {
-        format!("Evaluated to {}", self.value)
+        format!("Was expecting: {}", self.expected)
+    }
+
+    fn source_metadata(&self) -> SourceMetadata {
+        SourceMetadata {
+            start: self.start,
+            end: self.end,
+            source: self.source,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct WrongNumberOfArgs {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) source: Source,
+    pub(crate) got: usize,
+    pub(crate) expect: usize,
+}
+
+impl From<WrongNumberOfArgs> for RuntimeError {
+    fn from(value: WrongNumberOfArgs) -> Self {
+        RuntimeError::WrongNumberOfArgs(value)
+    }
+}
+
+impl Message for WrongNumberOfArgs {
+    fn description(&self) -> String {
+        format!("Expected {} arguments, but got {}", self.expect, self.got)
     }
 
     fn source_metadata(&self) -> SourceMetadata {
