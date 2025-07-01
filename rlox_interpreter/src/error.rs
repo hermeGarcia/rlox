@@ -1,6 +1,8 @@
 use rlox_errors::{Error, Message};
 use rlox_source::{Source, SourceMetadata};
 
+use crate::value_system::Value;
+
 #[derive(Debug)]
 pub enum RuntimeError {
     OperationNotDefined(OperationNotDefined),
@@ -108,7 +110,7 @@ pub struct UnexpectedValue {
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) source: Source,
-    pub(crate) expected: String,
+    pub(crate) found: Value,
 }
 
 impl From<UnexpectedValue> for RuntimeError {
@@ -119,7 +121,7 @@ impl From<UnexpectedValue> for RuntimeError {
 
 impl Message for UnexpectedValue {
     fn description(&self) -> String {
-        format!("Was expecting: {}", self.expected)
+        format!("Found: {}", self.found)
     }
 
     fn source_metadata(&self) -> SourceMetadata {

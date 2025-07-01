@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::{Ast, AstElem, AstIndex, AstVec, StrId, define_id};
+use crate::{Ast, AstElem, AstIndex, AstVec, Identifier, StrId, define_id};
 
 pub struct ExprNode<Inner> {
     pub expr_id: ExprId,
@@ -25,7 +25,7 @@ pub enum ExprKind {
     Binary(BinaryId),
     Call(CallId),
     Unary(UnaryId),
-    Identifier(StrId),
+    Identifier(Identifier),
     String(StrId),
     Natural(u64),
     Decimal(f64),
@@ -36,33 +36,15 @@ pub enum ExprKind {
 #[derive(Clone, Copy, Debug)]
 pub struct Nil;
 
-#[derive(Clone, Copy, Debug)]
-pub struct Identifier(StrId);
-
 impl From<Identifier> for ExprKind {
     fn from(value: Identifier) -> Self {
-        ExprKind::Identifier(value.0)
+        ExprKind::Identifier(value)
     }
 }
 
-impl Identifier {
-    pub fn new(inner: StrId) -> Identifier {
-        Identifier(inner)
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct LoxString(StrId);
-
-impl From<LoxString> for ExprKind {
-    fn from(value: LoxString) -> Self {
-        ExprKind::String(value.0)
-    }
-}
-
-impl LoxString {
-    pub fn new(inner: StrId) -> LoxString {
-        LoxString(inner)
+impl From<StrId> for ExprKind {
+    fn from(value: StrId) -> Self {
+        ExprKind::String(value)
     }
 }
 
@@ -105,8 +87,8 @@ impl AstElem<Identifier, Expr> for Ast {
     }
 }
 
-impl AstElem<LoxString, Expr> for Ast {
-    fn add(&mut self, elem: LoxString) -> Expr {
+impl AstElem<StrId, Expr> for Ast {
+    fn add(&mut self, elem: StrId) -> Expr {
         let global_id = self.expr_id;
 
         self.expr_metadata_buffer.push(None);
@@ -320,7 +302,7 @@ pub(crate) type CallVec = AstVec<Call, CallId>;
 
 #[derive(Clone, Debug)]
 pub struct Call {
-    pub caller: Expr,
+    pub lhs: Expr,
     pub arguments: Vec<Expr>,
 }
 

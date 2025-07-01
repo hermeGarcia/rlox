@@ -1,7 +1,7 @@
 use rlox_ast::expr;
+use rlox_ast::expr::BinaryOperator;
 use rlox_ast::expr::Expr;
-use rlox_ast::expr::{BinaryOperator, Identifier, LoxString};
-use rlox_ast::{Ast, AstElem, AstProperty};
+use rlox_ast::{Ast, AstElem, AstProperty, Identifier, StrId};
 use rlox_source::SourceMetadata;
 
 use crate::error;
@@ -282,17 +282,17 @@ fn call(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
     while ctxt.match_consume(TokenKind::LeftParen) {
         let call_expr = expr::Call {
-            caller: expr,
+            lhs: expr,
             arguments: call_arguments(ctxt, ast)?,
         };
 
-        let caller_metadata: SourceMetadata = *ast.get(call_expr.caller.global_id());
+        let lhs_metadata: SourceMetadata = *ast.get(call_expr.lhs.global_id());
         let end_of_call = ctxt.try_consume(TokenKind::RightParen)?;
 
         expr = ast.add(call_expr);
 
         ast.attach(expr.global_id(), SourceMetadata {
-            start: caller_metadata.start,
+            start: lhs_metadata.start,
             end: end_of_call.end,
             source: ctxt.src_id,
         });
@@ -319,8 +319,8 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
         TokenKind::String => lox_str(ctxt, ast),
 
         TokenKind::Identifier => {
-            let identifier = ast.add(&ctxt.src[token.start..token.end]);
-            Ok(ast.add(Identifier::new(identifier)))
+            let identifier: Identifier = ast.add(&ctxt.src[token.start..token.end]);
+            Ok(ast.add(identifier))
         }
 
         _ => Err(Into::into(error::UnexpectedToken {
@@ -355,9 +355,9 @@ fn lox_str(ctxt: &Context, ast: &mut Ast) -> ParserResult<Expr> {
     let str_start = token.start + 1;
     let str_end = token.end - 1;
 
-    let lox_str = ast.add(&ctxt.src[str_start..str_end]);
+    let lox_str: StrId = ast.add(&ctxt.src[str_start..str_end]);
 
-    Ok(ast.add(LoxString::new(lox_str)))
+    Ok(ast.add(lox_str))
 }
 
 fn nested_expression(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
@@ -446,6 +446,8 @@ mod tests {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();
         let expr = parse(&mut ctxt, &mut ast).unwrap();
+
+        rlox_errors::compiler_log!("HELLOOOO");
 
         assert_eq!(format!("{expected:?}"), format!("{:?}", expr.kind()));
 

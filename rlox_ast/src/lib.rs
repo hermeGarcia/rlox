@@ -118,28 +118,140 @@ impl AstElem<&[u8], StrId> for Ast {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Identifier {
+    identifier_id: usize,
+    str_id: StrId,
+}
+
+impl AstIndex for Identifier {
+    fn inner(&self) -> usize {
+        self.identifier_id
+    }
+}
+
+impl Index<Identifier> for Ast {
+    type Output = str;
+
+    fn index(&self, index: Identifier) -> &Self::Output {
+        &self[index.str_id]
+    }
+}
+
+impl AstElem<&[u8], Identifier> for Ast {
+    fn add(&mut self, elem: &[u8]) -> Identifier {
+        let global_id = self.identifier_id;
+
+        self.identifier_metadata_buffer.push(None);
+        self.identifier_id += 1;
+
+        Identifier {
+            identifier_id: global_id,
+            str_id: self.add(elem),
+        }
+    }
+}
+
+pub struct Function {
+    pub name: Identifier,
+    pub params: Vec<Identifier>,
+    pub body: stmt::BlockId,
+}
+
+define_id!(FunctionId);
+
+impl Index<FunctionId> for Ast {
+    type Output = Function;
+
+    fn index(&self, index: FunctionId) -> &Self::Output {
+        &self.functions[index.inner()]
+    }
+}
+
+impl AstElem<Function, FunctionId> for Ast {
+    fn add(&mut self, elem: Function) -> FunctionId {
+        let fn_id = self.functions.len();
+
+        self.functions.push(elem);
+        self.function_metadata_buffer.push(None);
+
+        FunctionId::new(fn_id)
+    }
+}
+
 #[derive(Default)]
 pub struct Ast {
     stmt_id: usize,
     expr_id: usize,
+    identifier_id: usize,
+
+    str_buffer: StrVec,
+    identifier_metadata_buffer: AstVec<Option<SourceMetadata>, Identifier>,
 
     initial_block: Vec<Stmt>,
-    str_buffer: StrVec,
 
-    // Expression buffers
+    // Function buffers.
+    functions: Vec<Function>,
+    function_metadata_buffer: AstVec<Option<SourceMetadata>, FunctionId>,
+
+    // Expression buffers.
     assign_buffer: expr::AssignVec,
     binary_buffer: expr::BinaryVec,
     call_buffer: expr::CallVec,
     unary_buffer: expr::UnaryVec,
     expr_metadata_buffer: AstVec<Option<SourceMetadata>, ExprId>,
 
-    // Statement buffers
+    // Statement buffers.
     print_buffer: stmt::PrintVec,
     declaration_buffer: stmt::DeclarationVec,
     stmt_buffer: stmt::BlockVec,
     ifelse_buffer: stmt::IfElseVec,
     while_buffer: stmt::WhileVec,
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
+}
+
+impl AstProperty<SourceMetadata, FunctionId> for Ast {
+    fn attach(&mut self, id: FunctionId, property: SourceMetadata) {
+        self.function_metadata_buffer[id] = Some(property);
+    }
+
+    fn get(&self, id: FunctionId) -> &SourceMetadata {
+        let Some(metadata) = &self.function_metadata_buffer[id] else {
+            panic!("{id:?} does not have metadata");
+        };
+
+        metadata
+    }
+
+    fn get_mut(&mut self, id: FunctionId) -> &mut SourceMetadata {
+        let Some(metadata) = &mut self.function_metadata_buffer[id] else {
+            panic!("{id:?} does not have metadata");
+        };
+
+        metadata
+    }
+}
+
+impl AstProperty<SourceMetadata, Identifier> for Ast {
+    fn attach(&mut self, id: Identifier, property: SourceMetadata) {
+        self.identifier_metadata_buffer[id] = Some(property);
+    }
+
+    fn get(&self, id: Identifier) -> &SourceMetadata {
+        let Some(metadata) = &self.identifier_metadata_buffer[id] else {
+            panic!("{id:?} does not have metadata");
+        };
+
+        metadata
+    }
+
+    fn get_mut(&mut self, id: Identifier) -> &mut SourceMetadata {
+        let Some(metadata) = &mut self.identifier_metadata_buffer[id] else {
+            panic!("{id:?} does not have metadata");
+        };
+
+        metadata
+    }
 }
 
 impl AstProperty<SourceMetadata, ExprId> for Ast {

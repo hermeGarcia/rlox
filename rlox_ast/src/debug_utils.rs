@@ -26,7 +26,7 @@ pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
 
         ExprKind::Call(id) => {
             let call = &ast[id];
-            let caller = fmt_expr(call.caller, ast);
+            let lhs = fmt_expr(call.lhs, ast);
             let arguments: Vec<_> = call
                 .arguments
                 .iter()
@@ -34,10 +34,12 @@ pub fn fmt_expr(expr: Expr, ast: &Ast) -> String {
                 .map(|arg| fmt_expr(arg, ast))
                 .collect();
 
-            format!("Call({caller}, {arguments:?})")
+            format!("Call({lhs}, {arguments:?})")
         }
 
-        ExprKind::Identifier(inner) | ExprKind::String(inner) => ast[inner].into(),
+        ExprKind::Identifier(inner) => ast[inner].into(),
+
+        ExprKind::String(inner) => ast[inner].into(),
 
         other => format!("{other:?}"),
     }

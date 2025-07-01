@@ -261,7 +261,7 @@ mod tests {
     #[test_case(b"while true { 1 + 1; }", "While(Boolean(true),Block([\"Plus(Natural(1), Natural(1))\"]))"; "while expression")]
     #[test_case(b"if false { true; } else { false; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),Block([\"Boolean(false)\"]))"; "if with else")]
     #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)"; "simple if")]
-    #[test_case(b"var a;", &format!("Declaration(a, None)"); "var declaration without assignment")]
+    #[test_case(b"var a;", "Declaration(a, None)"; "var declaration without assignment")]
     #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", ExprKind::Natural(2)); "var declaration with assignment")]
     #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)); "print complex arith expression")]
     #[test_case(b"print -2;", &format!("Print({:?}({:?}))", UnaryOperator::Minus, ExprKind::Natural(2)); "print neg expression")]

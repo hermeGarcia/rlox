@@ -45,14 +45,16 @@ pub fn read_file_to_string(context: NativeFnContext, _runtime: &Runtime) -> Runt
         }));
     }
 
-    let Value::String(file_path) = &context.args[0] else {
+    let file_path = &context.args[0];
+
+    let Value::String(file_path) = file_path else {
         let metadata = context.ast.get(context.caller);
 
         return Err(From::from(error::UnexpectedValue {
             start: metadata.start,
             end: metadata.end,
             source: metadata.source,
-            expected: "String".to_string(),
+            found: file_path.clone(),
         }));
     };
 

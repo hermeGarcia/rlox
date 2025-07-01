@@ -1,5 +1,5 @@
 use rlox_ast::expr::*;
-use rlox_ast::{Ast, StrId};
+use rlox_ast::{Ast, Identifier};
 use std::io::{BufWriter, Result, Write};
 
 pub fn graph<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
@@ -22,7 +22,7 @@ fn expression<W: Write>(expr: Expr, ast: &Ast, writer: &mut BufWriter<W>) -> Res
     }
 }
 
-fn identifier<W: Write>(node: ExprNode<StrId>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
+fn identifier<W: Write>(node: ExprNode<Identifier>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     let expr = node.expr_id;
     let data = &ast[node.inner];
 
@@ -75,8 +75,8 @@ fn call<W: Write>(node: ExprNode<CallId>, ast: &Ast, writer: &mut BufWriter<W>) 
 
     writeln!(writer, "\"{expr_id:?}\" [label=\"Call\"]")?;
 
-    writeln!(writer, "\"{expr_id:?}\" -> \"{:?}\"", data.caller.global_id())?;
-    expression(data.caller, ast, writer)?;
+    writeln!(writer, "\"{expr_id:?}\" -> \"{:?}\"", data.lhs.global_id())?;
+    expression(data.lhs, ast, writer)?;
 
     writeln!(writer, "\"args_of_{expr_id:?}\" [label=\"Args\"]")?;
     writeln!(writer, "\"{expr_id:?}\" -> \"args_of_{expr_id:?}\"")?;

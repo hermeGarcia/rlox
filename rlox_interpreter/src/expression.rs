@@ -1,5 +1,5 @@
 use rlox_ast::expr::*;
-use rlox_ast::{Ast, AstProperty, StrId};
+use rlox_ast::{Ast, AstProperty, Identifier};
 
 use crate::RuntimeResult;
 use crate::error;
@@ -50,7 +50,7 @@ fn assign(node: ExprNode<AssignId>, ast: &Ast, runtime: &mut Runtime) -> Runtime
     Ok(Value::Nil)
 }
 
-fn identifier(node: ExprNode<StrId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
+fn identifier(node: ExprNode<Identifier>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
     let Some(value) = runtime.address(&ast[node.inner]) else {
         let metadata = ast.get(node.expr_id);
 
@@ -134,15 +134,16 @@ fn unary(node: ExprNode<UnaryId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeRe
 
 fn call(node: ExprNode<CallId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResult<Value> {
     let call = &ast[node.inner];
+    let lhs = deref_expression(call.lhs, ast, runtime)?;
 
-    let Value::Fn(callee) = deref_expression(call.caller, ast, runtime)? else {
+    let Value::Fn(lhs) = lhs else {
         let metadata = ast.get(node.expr_id);
 
         return Err(From::from(error::UnexpectedValue {
             start: metadata.start,
             end: metadata.end,
             source: metadata.source,
-            expected: "Fn".to_string(),
+            found: lhs,
         }));
     };
 
@@ -156,5 +157,5 @@ fn call(node: ExprNode<CallId>, ast: &Ast, runtime: &mut Runtime) -> RuntimeResu
         context.args.push(deref_expression(arg, ast, runtime)?);
     }
 
-    (callee.function)(context, runtime)
+    (lhs.function)(context, runtime)
 }

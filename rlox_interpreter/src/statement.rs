@@ -60,8 +60,9 @@ fn block<'a>(node: StmtNode<BlockId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -
 
 fn if_else<'a>(node: StmtNode<IfElseId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     let stmt = &ast[node.inner];
+    let condition = expression::deref_expression(stmt.condition, ast, runtime)?;
 
-    let Value::Boolean(value) = expression::deref_expression(stmt.condition, ast, runtime)? else {
+    let Value::Boolean(condition) = condition else {
         let stmt_metadata = ast.get(node.stmt_id);
         let condition_metadata = ast.get(stmt.condition.global_id());
 
@@ -69,11 +70,11 @@ fn if_else<'a>(node: StmtNode<IfElseId>, ast: &'a Ast, runtime: &mut Runtime<'a>
             start: stmt_metadata.start,
             end: condition_metadata.end,
             source: stmt_metadata.source,
-            expected: "Boolean".to_string(),
+            found: condition,
         }));
     };
 
-    if value {
+    if condition {
         eval(stmt.if_branch, ast, runtime)
     } else if let Some(branch) = stmt.else_branch {
         eval(branch, ast, runtime)
@@ -86,7 +87,9 @@ fn while_stmt<'a>(node: StmtNode<WhileId>, ast: &'a Ast, runtime: &mut Runtime<'
     let stmt = &ast[node.inner];
 
     loop {
-        let Value::Boolean(value) = expression::deref_expression(stmt.condition, ast, runtime)? else {
+        let condition = expression::deref_expression(stmt.condition, ast, runtime)?;
+
+        let Value::Boolean(condition) = condition else {
             let stmt_metadata = ast.get(node.stmt_id);
             let condition_metadata = ast.get(stmt.condition.global_id());
 
@@ -94,15 +97,15 @@ fn while_stmt<'a>(node: StmtNode<WhileId>, ast: &'a Ast, runtime: &mut Runtime<'
                 start: stmt_metadata.start,
                 end: condition_metadata.end,
                 source: stmt_metadata.source,
-                expected: "Boolean".to_string(),
+                found: condition,
             }));
         };
 
-        if !value {
+        if condition {
+            eval(stmt.body, ast, runtime)?;
+        } else {
             return Ok(());
         }
-
-        eval(stmt.body, ast, runtime)?;
     }
 }
 

@@ -72,7 +72,10 @@ where
 
     let data_as_bytes = source.data.as_bytes();
     let relevant_part = String::from_utf8_lossy(&data_as_bytes[metadata.start..metadata.end]);
-    let mut line_offset = 1 + data_as_bytes[..metadata.start].iter().filter(|&&b| b == b'\n').count();
+    let mut line_offset = 1 + data_as_bytes[..metadata.start]
+        .iter()
+        .filter(|&&b| b == b'\n')
+        .count();
 
     for line in relevant_part.lines() {
         writeln!(stdout, "  {line_offset}| {line}").unwrap();
@@ -84,7 +87,7 @@ where
 #[macro_export]
 macro_rules! compiler_log {
     ($msg:expr) => {
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, not(test)))]
         {
             use std::io::{Write, stdout};
             let msg = format!($msg);
