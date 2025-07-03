@@ -11,6 +11,6 @@ rlox_ast = { path = "../rlox_ast" }
 
 [[bin]]
 path = "src/main.rs"
-name = "rlox-to-graph"
+name = "inspect"
 test = false
 bench = false
