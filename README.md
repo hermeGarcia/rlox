@@ -1,8 +1,6 @@
 <h1 align="center"> rlox </h1>
 <h2 align="center"> A rust implementation of the lox programming language </h3>
 
----
-
 Lox is the programming language in [crafting interpreters](https://craftinginterpreters.com), an amazing book that I can not recommend enough.
 
 As computer scientist passionate about compilers and programming languages I like to implement new ideas that come to mind or that I find while researching. Sometimes I also like to write posts about the implementation journey and thats why this repo is public, Lox is the perfect language for me to use a playground.
@@ -11,7 +9,6 @@ Keep in mind when diving in this codebase that, while I care a lot about code qu
 
 One of my goals for this project is to use as little third party dependencies as possible. So if at some point you think that I am reinventing the wheel, I most certainly am.
 
----
 
 ## Structure of the project
 
