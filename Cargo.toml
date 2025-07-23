@@ -8,6 +8,8 @@ members = [
     "rlox_ast", 
     "rlox_graphviz", 
     "rlox_interpreter",
+    "rlox_cf_graph",
+    "rlox_infra",
 ]
 resolver = "2"
 

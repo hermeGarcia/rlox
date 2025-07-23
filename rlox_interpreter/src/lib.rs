@@ -22,7 +22,7 @@ pub struct EvalReport;
 pub fn eval(ast: &Ast) -> Result<EvalReport, RuntimeFailure> {
     let mut runtime = Runtime::new();
 
-    for stmt in ast.initial_block().iter().copied() {
+    for stmt in ast.main().iter().copied() {
         if let Err(error) = statement::eval(stmt, ast, &mut runtime) {
             rlox_errors::error(error);
             return Err(RuntimeFailure);

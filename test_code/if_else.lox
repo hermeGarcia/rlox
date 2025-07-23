@@ -47,7 +47,7 @@ if test == 1 {
 } else if test == 8 {
     println("Is eight");
 } else if test == 9 {
-    println "Is nine";
+    println("Is nine");
 } else if test == 10 {
     println("Is ten");
 } else {

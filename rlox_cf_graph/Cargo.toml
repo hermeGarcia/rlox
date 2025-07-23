@@ -1,8 +1,8 @@
 [package]
-name = "rlox_ast"
+name = "rlox_cf_graph"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rlox_source = { path = "../rlox_source" }
+rlox_ast = { path = "../rlox_ast" }
 rlox_infra = { path = "../rlox_infra" }

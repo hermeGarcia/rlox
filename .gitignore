@@ -1,5 +1,6 @@
 target/
 heavy_benches/
+out/
 Cargo.lock
 .DS_Store
 .vscode

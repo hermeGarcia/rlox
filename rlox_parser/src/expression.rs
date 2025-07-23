@@ -1,7 +1,8 @@
 use rlox_ast::expr;
 use rlox_ast::expr::BinaryOperator;
 use rlox_ast::expr::Expr;
-use rlox_ast::{Ast, AstElem, AstProperty, Identifier, StrId};
+use rlox_ast::{Ast, AstElem, Identifier, StrId};
+use rlox_infra::StructVec;
 use rlox_source::SourceMetadata;
 
 use crate::error;
@@ -37,7 +38,7 @@ fn assign(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(assign_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -62,7 +63,7 @@ fn logic_or(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -87,7 +88,7 @@ fn logic_and(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -120,7 +121,7 @@ fn equality(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -155,7 +156,7 @@ fn comparison(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -188,7 +189,7 @@ fn term(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -202,6 +203,7 @@ fn factor_operator(ctxt: &Context) -> Option<expr::BinaryOperator> {
     match ctxt.peek().kind {
         TokenKind::Slash => Some(expr::BinaryOperator::Division),
         TokenKind::Star => Some(expr::BinaryOperator::Multiply),
+        TokenKind::Modulus => Some(expr::BinaryOperator::Modulus),
         _ => None,
     }
 }
@@ -221,7 +223,7 @@ fn factor(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(binary_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: rhs_metadata.end,
             source: ctxt.src_id,
@@ -254,7 +256,7 @@ fn unary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     let operand_metadata = *ast.get(unary_expr.operand.global_id());
     let unary = ast.add(unary_expr);
 
-    ast.attach(unary.global_id(), SourceMetadata {
+    ast.assign(unary.global_id(), SourceMetadata {
         start: first_token.start,
         end: operand_metadata.end,
         source: ctxt.src_id,
@@ -291,7 +293,7 @@ fn call(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
 
         expr = ast.add(call_expr);
 
-        ast.attach(expr.global_id(), SourceMetadata {
+        ast.assign(expr.global_id(), SourceMetadata {
             start: lhs_metadata.start,
             end: end_of_call.end,
             source: ctxt.src_id,
@@ -339,7 +341,7 @@ fn primary(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Expr> {
     }?;
 
     ctxt.consume();
-    ast.attach(primary.global_id(), SourceMetadata {
+    ast.assign(primary.global_id(), SourceMetadata {
         start: token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
@@ -420,6 +422,7 @@ mod tests {
     #[test_case(b"-2", &format!("{:?}({:?})", UnaryOperator::Minus, ExprKind::Natural(2)); "neg expression")]
     #[test_case(b"12 * 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)); "mul expression")]
     #[test_case(b"12 + 3", &format!("{:?}({:?}, {:?})", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)); "add expression")]
+    #[test_case(b"12 % 3", "Modulus(Natural(12), Natural(3))"; "modulus expression")]
     #[test_case(b"true and false", &format!("{:?}({:?}, {:?})", BinaryOperator::LogicAnd, ExprKind::Boolean(true), ExprKind::Boolean(false)); "simple boolean expression")]
     #[test_case(b"true or false and true", "LogicOr(Boolean(true), LogicAnd(Boolean(false), Boolean(true)))"; "nested boolean expression")]
     #[test_case(b"my_cool_function()", "Call(my_cool_function, [])"; "fn with no args")]

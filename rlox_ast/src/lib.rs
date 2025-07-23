@@ -3,12 +3,14 @@ pub mod debug_utils;
 pub mod expr;
 pub mod stmt;
 
-use expr::{Expr, ExprId};
-use stmt::{Stmt, StmtId};
-
-use rlox_source::SourceMetadata;
 use std::marker::PhantomData;
 use std::ops::{Index, IndexMut};
+
+use rlox_infra::StructVec;
+use rlox_source::SourceMetadata;
+
+use expr::{Expr, ExprId};
+use stmt::{Stmt, StmtId};
 
 #[macro_export]
 macro_rules! define_id {
@@ -32,12 +34,6 @@ macro_rules! define_id {
 
 pub trait AstElem<Elem, ElemId> {
     fn add(&mut self, elem: Elem) -> ElemId;
-}
-
-pub trait AstProperty<Property, ElemId> {
-    fn attach(&mut self, id: ElemId, property: Property);
-    fn get(&self, id: ElemId) -> &Property;
-    fn get_mut(&mut self, id: ElemId) -> &mut Property;
 }
 
 trait AstIndex {
@@ -152,6 +148,10 @@ impl AstElem<&[u8], Identifier> for Ast {
     }
 }
 
+/// Functions TODO:\
+/// - [X] AST support.\
+/// - [ ] Parsing.\
+/// - [ ] Execution.
 pub struct Function {
     pub name: Identifier,
     pub params: Vec<Identifier>,
@@ -202,7 +202,6 @@ pub struct Ast {
     expr_metadata_buffer: AstVec<Option<SourceMetadata>, ExprId>,
 
     // Statement buffers.
-    print_buffer: stmt::PrintVec,
     declaration_buffer: stmt::DeclarationVec,
     stmt_buffer: stmt::BlockVec,
     ifelse_buffer: stmt::IfElseVec,
@@ -210,8 +209,8 @@ pub struct Ast {
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
 }
 
-impl AstProperty<SourceMetadata, FunctionId> for Ast {
-    fn attach(&mut self, id: FunctionId, property: SourceMetadata) {
+impl StructVec<SourceMetadata, FunctionId> for Ast {
+    fn assign(&mut self, id: FunctionId, property: SourceMetadata) {
         self.function_metadata_buffer[id] = Some(property);
     }
 
@@ -232,8 +231,8 @@ impl AstProperty<SourceMetadata, FunctionId> for Ast {
     }
 }
 
-impl AstProperty<SourceMetadata, Identifier> for Ast {
-    fn attach(&mut self, id: Identifier, property: SourceMetadata) {
+impl StructVec<SourceMetadata, Identifier> for Ast {
+    fn assign(&mut self, id: Identifier, property: SourceMetadata) {
         self.identifier_metadata_buffer[id] = Some(property);
     }
 
@@ -254,8 +253,8 @@ impl AstProperty<SourceMetadata, Identifier> for Ast {
     }
 }
 
-impl AstProperty<SourceMetadata, ExprId> for Ast {
-    fn attach(&mut self, id: ExprId, property: SourceMetadata) {
+impl StructVec<SourceMetadata, ExprId> for Ast {
+    fn assign(&mut self, id: ExprId, property: SourceMetadata) {
         self.expr_metadata_buffer[id] = Some(property);
     }
 
@@ -276,8 +275,8 @@ impl AstProperty<SourceMetadata, ExprId> for Ast {
     }
 }
 
-impl AstProperty<SourceMetadata, StmtId> for Ast {
-    fn attach(&mut self, id: StmtId, property: SourceMetadata) {
+impl StructVec<SourceMetadata, StmtId> for Ast {
+    fn assign(&mut self, id: StmtId, property: SourceMetadata) {
         self.stmt_metadata_buffer[id] = Some(property);
     }
 
@@ -303,7 +302,7 @@ impl Ast {
         self.initial_block.push(stmt);
     }
 
-    pub fn initial_block(&self) -> &[Stmt] {
+    pub fn main(&self) -> &[Stmt] {
         &self.initial_block
     }
 }

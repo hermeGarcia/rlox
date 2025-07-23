@@ -7,6 +7,7 @@ edition = "2021"
 rlox_errors = { path = "../rlox_errors" }
 rlox_source = { path = "../rlox_source" }
 rlox_ast = { path = "../rlox_ast" }
+rlox_infra = { path = "../rlox_infra" }
 
 [dev-dependencies]
 test-case = { workspace = true }

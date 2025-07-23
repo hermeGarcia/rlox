@@ -146,6 +146,17 @@ pub fn sub(lhs: Value, rhs: Value) -> VsResult<Value> {
     }
 }
 
+pub fn modulus(lhs: Value, rhs: Value) -> VsResult<Value> {
+    match cast_to_common(lhs, rhs)? {
+        (Value::Nil, _) => Ok(Value::Nil),
+        (_, Value::Nil) => Ok(Value::Nil),
+        (Value::Natural(lhs), Value::Natural(rhs)) => Ok(Value::Natural(lhs % rhs)),
+        (Value::Signed(lhs), Value::Signed(rhs)) => Ok(Value::Signed(lhs % rhs)),
+        (Value::Decimal(lhs), Value::Decimal(rhs)) => Ok(Value::Decimal(lhs % rhs)),
+        _ => Err(OperationNotDefined),
+    }
+}
+
 pub fn mul(lhs: Value, rhs: Value) -> VsResult<Value> {
     match cast_to_common(lhs, rhs)? {
         (Value::Nil, _) => Ok(Value::Nil),

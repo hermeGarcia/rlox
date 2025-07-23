@@ -8,9 +8,5 @@ rlox_errors = { path = "../rlox_errors" }
 rlox_parser = { path = "../rlox_parser" }
 rlox_source = { path = "../rlox_source" }
 rlox_ast = { path = "../rlox_ast" }
-
-[[bin]]
-path = "src/main.rs"
-name = "inspect"
-test = false
-bench = false
+rlox_cf_graph = { path = "../rlox_cf_graph" }
+rlox_infra = { path = "../rlox_infra" }

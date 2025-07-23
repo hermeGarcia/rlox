@@ -1,8 +1,9 @@
 use std::fs;
 
+use rlox_ast::Ast;
 use rlox_ast::expr::ExprId;
-use rlox_ast::{Ast, AstProperty};
 use rlox_errors::compiler_log;
+use rlox_infra::StructVec;
 
 use crate::RuntimeResult;
 use crate::error;

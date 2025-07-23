@@ -1,6 +1,7 @@
 use rlox_ast::stmt;
 use rlox_ast::stmt::Stmt;
-use rlox_ast::{Ast, AstElem, AstProperty};
+use rlox_ast::{Ast, AstElem};
+use rlox_infra::StructVec;
 use rlox_source::SourceMetadata;
 
 use crate::error;
@@ -15,7 +16,6 @@ pub fn parse(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 fn stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     match ctxt.peek().kind {
         TokenKind::Var => var_stmt(ctxt, ast),
-        TokenKind::Print => print_stmt(ctxt, ast),
         TokenKind::LeftBrace => block_stmt(ctxt, ast),
         TokenKind::If => if_else_stmt(ctxt, ast),
         TokenKind::While => while_stmt(ctxt, ast),
@@ -39,7 +39,7 @@ fn for_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         let token = ctxt.consume();
         let condition = ast.add(true);
 
-        ast.attach(condition.global_id(), SourceMetadata {
+        ast.assign(condition.global_id(), SourceMetadata {
             start: token.start,
             end: token.end,
             source: ctxt.src_id,
@@ -58,7 +58,7 @@ fn for_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
     } else {
         let expr = expression::parse(ctxt, ast)?;
         let increment = ast.add(expr);
-        ast.attach(increment.global_id(), *ast.get(expr.global_id()));
+        ast.assign(increment.global_id(), *ast.get(expr.global_id()));
         ctxt.try_consume(TokenKind::RightParen)?;
 
         Some(increment)
@@ -70,7 +70,7 @@ fn for_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         Some(increment) => {
             let inner_body = block_stmt(ctxt, ast)?;
             let outer_body = ast.add([inner_body, increment].as_slice());
-            ast.attach(outer_body.global_id(), *ast.get(inner_body.global_id()));
+            ast.assign(outer_body.global_id(), *ast.get(inner_body.global_id()));
             outer_body
         }
     };
@@ -86,14 +86,14 @@ fn for_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         body,
     });
 
-    ast.attach(while_stmt.global_id(), metadata);
+    ast.assign(while_stmt.global_id(), metadata);
 
     let Some(declaration) = declaration else {
         return Ok(while_stmt);
     };
 
     let full_loop = ast.add([declaration, while_stmt].as_slice());
-    ast.attach(full_loop.global_id(), metadata);
+    ast.assign(full_loop.global_id(), metadata);
 
     Ok(full_loop)
 }
@@ -109,7 +109,7 @@ fn while_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         body,
     });
 
-    ast.attach(stmt.global_id(), SourceMetadata {
+    ast.assign(stmt.global_id(), SourceMetadata {
         start: start_token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
@@ -149,7 +149,7 @@ fn if_else_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         else_branch,
     });
 
-    ast.attach(stmt.global_id(), SourceMetadata {
+    ast.assign(stmt.global_id(), SourceMetadata {
         start: start_token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
@@ -177,27 +177,7 @@ fn var_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
         value,
     });
 
-    ast.attach(stmt.global_id(), SourceMetadata {
-        start: start_token.start,
-        end: ctxt.peek().start,
-        source: ctxt.src_id,
-    });
-
-    Ok(stmt)
-}
-
-fn print_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
-    let start_token = ctxt.consume();
-
-    let print_stmt = stmt::Print {
-        expr: expression::parse(ctxt, ast)?,
-    };
-
-    ctxt.try_consume(TokenKind::Semicolon)?;
-
-    let stmt = ast.add(print_stmt);
-
-    ast.attach(stmt.global_id(), SourceMetadata {
+    ast.assign(stmt.global_id(), SourceMetadata {
         start: start_token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
@@ -213,7 +193,7 @@ fn expr_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 
     let stmt = ast.add(expr);
 
-    ast.attach(stmt.global_id(), SourceMetadata {
+    ast.assign(stmt.global_id(), SourceMetadata {
         end: ctxt.peek().start,
         ..*ast.get(expr.global_id())
     });
@@ -235,7 +215,7 @@ fn block_stmt(ctxt: &mut Context, ast: &mut Ast) -> ParserResult<Stmt> {
 
     let stmt = ast.add(block_stmts.as_slice());
 
-    ast.attach(stmt.global_id(), SourceMetadata {
+    ast.assign(stmt.global_id(), SourceMetadata {
         start: start_token.start,
         end: ctxt.peek().start,
         source: ctxt.src_id,
@@ -263,10 +243,7 @@ mod tests {
     #[test_case(b"if false { true; }", "IfElse(Boolean(false),Block([\"Boolean(true)\"]),None)"; "simple if")]
     #[test_case(b"var a;", "Declaration(a, None)"; "var declaration without assignment")]
     #[test_case(b"var a = 2;", &format!("Declaration(a, {:?})", ExprKind::Natural(2)); "var declaration with assignment")]
-    #[test_case(b"print -12 + (2);", &format!("Print({:?}({:?}({:?}), {:?}))", BinaryOperator::Plus, UnaryOperator::Minus, ExprKind::Natural(12), ExprKind::Natural(2)); "print complex arith expression")]
-    #[test_case(b"print -2;", &format!("Print({:?}({:?}))", UnaryOperator::Minus, ExprKind::Natural(2)); "print neg expression")]
-    #[test_case(b"print 12 * 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Multiply, ExprKind::Natural(12), ExprKind::Natural(3)); "print mul expression")]
-    #[test_case(b"print 12 + 3;", &format!("Print({:?}({:?}, {:?}))", BinaryOperator::Plus, ExprKind::Natural(12), ExprKind::Natural(3)); "print add expression")]
+    #[test_case(b"println(-12 + (2));", "Call(println, [\"Plus(Minus(Natural(12)), Natural(2))\"])" ; "print complex arith expression")]
     fn stmt_parsing(source: &[u8], expected: &str) {
         let mut ctxt = Context::new(Source::Prompt, source);
         let mut ast = Ast::default();

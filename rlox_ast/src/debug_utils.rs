@@ -81,12 +81,6 @@ pub fn fmt_stmt(stmt: Stmt, ast: &Ast) -> String {
             format!("While({condition},{body})")
         }
 
-        StmtKind::Print(id) => {
-            let print = &ast[id];
-            let operand = fmt_expr(print.expr, ast);
-            format!("Print({operand})")
-        }
-
         StmtKind::Declaration(id) => {
             let declaration = &ast[id];
             let identifier = &ast[declaration.identifier];

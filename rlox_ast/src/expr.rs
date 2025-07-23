@@ -201,18 +201,19 @@ pub(crate) type BinaryVec = AstVec<Binary, BinaryId>;
 
 #[derive(Clone, Copy, Debug)]
 pub enum BinaryOperator {
+    Division,
     Equal,
-    NotEqual,
-    Less,
-    LessOrEqual,
     Greater,
     GreaterOrEqual,
-    Plus,
-    Minus,
-    Multiply,
-    Division,
+    Less,
+    LessOrEqual,
     LogicAnd,
     LogicOr,
+    Minus,
+    Modulus,
+    Multiply,
+    NotEqual,
+    Plus,
 }
 
 #[derive(Clone, Debug, Copy)]

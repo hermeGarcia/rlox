@@ -3,11 +3,10 @@ use rlox_ast::expr::Expr;
 use rlox_ast::stmt::*;
 use std::io::{BufWriter, Result, Write};
 
-use crate::expression;
+use crate::ast::expression;
 
 pub fn graph<W: Write>(stmt: Stmt, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
     match stmt.kind() {
-        StmtKind::Print(inner) => print(stmt_node!(stmt, inner), ast, writer),
         StmtKind::Block(inner) => block(stmt_node!(stmt, inner), ast, writer),
         StmtKind::Declaration(inner) => declaration(stmt_node!(stmt, inner), ast, writer),
         StmtKind::IfElse(inner) => if_else(stmt_node!(stmt, inner), ast, writer),
@@ -35,18 +34,6 @@ fn block<W: Write>(node: StmtNode<BlockId>, ast: &Ast, writer: &mut BufWriter<W>
         writeln!(writer, "\"{stmt_id:?}\" -> \"{:?}\"", inner_stmt.global_id())?;
         graph(inner_stmt, ast, writer)?;
     }
-
-    Ok(())
-}
-
-fn print<W: Write>(node: StmtNode<PrintId>, ast: &Ast, writer: &mut BufWriter<W>) -> Result<()> {
-    let stmt_id = node.stmt_id;
-    let data = &ast[node.inner];
-
-    expression::graph(data.expr, ast, writer)?;
-
-    writeln!(writer, "\"{stmt_id:?}\" [label=\"Print\"]")?;
-    writeln!(writer, "\"{stmt_id:?}\" -> \"{:?}\"", data.expr.global_id())?;
 
     Ok(())
 }

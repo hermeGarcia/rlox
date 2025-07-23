@@ -1,7 +1,7 @@
 use rlox_ast::Ast;
-use rlox_ast::AstProperty;
 use rlox_ast::expr::Expr;
 use rlox_ast::stmt::*;
+use rlox_infra::StructVec;
 
 use crate::RuntimeResult;
 use crate::error;
@@ -14,7 +14,6 @@ type StmtResult = RuntimeResult<()>;
 pub fn eval<'a>(stmt: Stmt, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
     match stmt.kind() {
         StmtKind::Expr(inner) => expr_stmt(stmt_node!(stmt, inner), ast, runtime),
-        StmtKind::Print(inner) => print(stmt_node!(stmt, inner), ast, runtime),
         StmtKind::Declaration(inner) => declaration(stmt_node!(stmt, inner), ast, runtime),
         StmtKind::Block(inner) => block(stmt_node!(stmt, inner), ast, runtime),
         StmtKind::IfElse(inner) => if_else(stmt_node!(stmt, inner), ast, runtime),
@@ -31,15 +30,6 @@ fn declaration<'a>(node: StmtNode<DeclarationId>, ast: &'a Ast, runtime: &mut Ru
     };
 
     runtime.insert(&ast[declaration.identifier], value);
-
-    Ok(())
-}
-
-fn print<'a>(node: StmtNode<PrintId>, ast: &'a Ast, runtime: &mut Runtime<'a>) -> StmtResult {
-    let stmt = &ast[node.inner];
-    let expr_value = expression::deref_expression(stmt.expr, ast, runtime)?;
-
-    println!("{expr_value}");
 
     Ok(())
 }

@@ -30,48 +30,49 @@ pub struct Token {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum TokenKind {
-    LeftParen,
-    RightParen,
-    LeftBrace,
-    RightBrace,
+    And,
+    Bang,
+    BangEqual,
+    Class,
     Comma,
+    Comment,
+    Decimal,
     Dot,
+    Else,
+    Eof,
+    Equal,
+    EqualEqual,
+    False,
+    For,
+    Fun,
+    Greater,
+    GreaterEqual,
+    Identifier,
+    If,
+    Integer,
+    LeftBrace,
+    LeftParen,
+    Less,
+    LessEqual,
     Minus,
+    Modulus,
+    Nil,
+    Or,
     Plus,
+    Print,
+    Return,
+    RightBrace,
+    RightParen,
     Semicolon,
     Slash,
     Star,
-    Bang,
-    BangEqual,
-    Equal,
-    EqualEqual,
-    Greater,
-    GreaterEqual,
-    Less,
-    LessEqual,
-    Identifier,
     String,
-    Integer,
-    Decimal,
-    And,
-    Class,
-    Else,
-    False,
-    Fun,
-    For,
-    If,
-    Nil,
-    Or,
-    Print,
-    Return,
     Super,
     This,
     True,
+    Unknown,
     Var,
     While,
-    Comment,
-    Eof,
-    Unknown,
 }
 
 pub struct TokenStream<'a> {
@@ -140,6 +141,8 @@ impl TokenStream<'_> {
             b';' => token!(TokenKind::Semicolon, self, 1),
 
             b'*' => token!(TokenKind::Star, self, 1),
+
+            b'%' => token!(TokenKind::Modulus, self, 1),
 
             b'!' if self.matches(1, b'=') => token!(TokenKind::BangEqual, self, 2),
             b'!' => token!(TokenKind::Bang, self, 1),
@@ -303,6 +306,7 @@ mod tests {
     #[test_case(b"!=", TokenKind::BangEqual; "bang_equal")]
     #[test_case(b"!", TokenKind::Bang; "bang")]
     #[test_case(b"*", TokenKind::Star; "star")]
+    #[test_case(b"%", TokenKind::Modulus; "modulus")]
     #[test_case(b"/", TokenKind::Slash; "slash")]
     #[test_case(b";", TokenKind::Semicolon; "semicolon")]
     #[test_case(b"+", TokenKind::Plus; "plus")]

@@ -2,6 +2,7 @@ use std::ops::{Index, IndexMut};
 
 use crate::{Ast, AstElem, AstIndex, AstVec, Expr, StrId, define_id};
 
+#[derive(Debug, Clone, Copy)]
 pub struct StmtNode<Inner> {
     pub stmt_id: StmtId,
     pub inner: Inner,
@@ -10,7 +11,7 @@ pub struct StmtNode<Inner> {
 #[macro_export]
 macro_rules! stmt_node {
     ($global:expr, $inner: expr) => {
-        StmtNode {
+        rlox_ast::stmt::StmtNode {
             stmt_id: $global.global_id(),
             inner: $inner,
         }
@@ -21,7 +22,6 @@ pub use stmt_node;
 
 #[derive(Clone, Copy, Debug)]
 pub enum StmtKind {
-    Print(PrintId),
     Declaration(DeclarationId),
     Block(BlockId),
     IfElse(IfElseId),
@@ -65,44 +65,6 @@ impl Stmt {
 
     pub fn kind(&self) -> StmtKind {
         self.kind
-    }
-}
-
-define_id!(PrintId);
-pub(crate) type PrintVec = AstVec<Print, PrintId>;
-
-#[derive(Clone, Debug)]
-pub struct Print {
-    pub expr: Expr,
-}
-
-impl Index<PrintId> for Ast {
-    type Output = Print;
-
-    fn index(&self, index: PrintId) -> &Self::Output {
-        &self.print_buffer[index]
-    }
-}
-
-impl IndexMut<PrintId> for Ast {
-    fn index_mut(&mut self, index: PrintId) -> &mut Self::Output {
-        &mut self.print_buffer[index]
-    }
-}
-
-impl AstElem<Print, Stmt> for Ast {
-    fn add(&mut self, elem: Print) -> Stmt {
-        let global_id = self.stmt_id;
-        let inner = PrintId::new(self.print_buffer.len());
-
-        self.print_buffer.push(elem);
-        self.stmt_metadata_buffer.push(None);
-        self.stmt_id += 1;
-
-        Stmt {
-            global_id: StmtId(global_id),
-            kind: StmtKind::Print(inner),
-        }
     }
 }
 

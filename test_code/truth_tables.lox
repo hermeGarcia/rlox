@@ -14,9 +14,9 @@ if (true or true) == true {
     println("     1    1   1");
 }
 
-println "";
+println("");
 
-println "AND";
+println("AND");
 if (false and false) == false {
     println("     0    0   0");
 }

@@ -1,5 +1,6 @@
 use rlox_ast::expr::*;
-use rlox_ast::{Ast, AstProperty, Identifier};
+use rlox_ast::{Ast, Identifier};
+use rlox_infra::StructVec;
 
 use crate::RuntimeResult;
 use crate::error;
@@ -92,18 +93,19 @@ fn binary(node: ExprNode<BinaryId>, ast: &Ast, runtime: &mut Runtime) -> Runtime
 
 fn apply_binary_operator(operator: BinaryOperator, lhs: Value, rhs: Value) -> VsResult<Value> {
     match operator {
-        BinaryOperator::Plus => value_system::add(lhs, rhs),
-        BinaryOperator::Minus => value_system::sub(lhs, rhs),
-        BinaryOperator::Multiply => value_system::mul(lhs, rhs),
         BinaryOperator::Division => value_system::div(lhs, rhs),
         BinaryOperator::Equal => value_system::equal(lhs, rhs),
-        BinaryOperator::NotEqual => value_system::not_equal(lhs, rhs),
-        BinaryOperator::Less => value_system::less(lhs, rhs),
-        BinaryOperator::LessOrEqual => value_system::less_or_equal(lhs, rhs),
         BinaryOperator::Greater => value_system::greater(lhs, rhs),
         BinaryOperator::GreaterOrEqual => value_system::greater_or_equal(lhs, rhs),
+        BinaryOperator::Less => value_system::less(lhs, rhs),
+        BinaryOperator::LessOrEqual => value_system::less_or_equal(lhs, rhs),
         BinaryOperator::LogicAnd => value_system::and(lhs, rhs),
         BinaryOperator::LogicOr => value_system::or(lhs, rhs),
+        BinaryOperator::Minus => value_system::sub(lhs, rhs),
+        BinaryOperator::Modulus => value_system::modulus(lhs, rhs),
+        BinaryOperator::Multiply => value_system::mul(lhs, rhs),
+        BinaryOperator::NotEqual => value_system::not_equal(lhs, rhs),
+        BinaryOperator::Plus => value_system::add(lhs, rhs),
     }
 }
 
