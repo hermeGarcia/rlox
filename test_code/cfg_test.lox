@@ -2,8 +2,6 @@
 
 var my_var = 12;
 
-println(my_var);
-
 while my_var != 1 {
     
     if my_var%2 == 0 {
@@ -11,8 +9,4 @@ while my_var != 1 {
     } else {
         my_var = 3*my_var + 1;
     }
-
-    println(my_var);
 }
-
-println(my_var);

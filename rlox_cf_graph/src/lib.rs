@@ -48,8 +48,11 @@ pub enum BasicBlockValue {
     Declaration(StmtNode<stmt::DeclarationId>),
     StmtExpr(StmtNode<Expr>),
     Condition(Expr),
-    EnterBlock,
-    LeaveBlock,
+
+    // Block values have a unique value identifying them.
+    EnterBlock(usize),
+    LeaveBlock(usize),
+
     EntryPoint,
     EndPoint,
 }

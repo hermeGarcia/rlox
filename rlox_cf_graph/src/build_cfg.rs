@@ -5,6 +5,7 @@ use rlox_infra::StructVec;
 use crate::{BasicBlockId, BasicBlockValue, ControlFlowGraph, EdgeKind, Edges};
 
 struct State {
+    block_label: usize,
     graph: ControlFlowGraph,
     parents: Vec<(BasicBlockId, EdgeKind)>,
 }
@@ -15,6 +16,7 @@ pub fn from_sequence_of_stmts(sequence: &[ast_stmt::Stmt], ast: &Ast) -> Control
     let end_id = graph.fresh_block(BasicBlockValue::EndPoint);
 
     let mut builder = State {
+        block_label: 0,
         graph,
         parents: vec![(entry_id, EdgeKind::Unconditional)],
     };
@@ -102,7 +104,12 @@ fn branch_dispatch(id: ast_stmt::IfElseId, ast: &Ast, builder: &mut State) -> Ve
 }
 
 fn block_dispatch(id: ast_stmt::BlockId, ast: &Ast, builder: &mut State) -> Vec<(BasicBlockId, EdgeKind)> {
-    let enter_block = builder.graph.fresh_block(BasicBlockValue::EnterBlock);
+    let block_label = builder.block_label;
+    builder.block_label += 1;
+
+    let enter_block = builder
+        .graph
+        .fresh_block(BasicBlockValue::EnterBlock(block_label));
 
     for (parent, edge_kind) in builder.parents.iter().copied() {
         let edges: &mut Edges = builder.graph.get_mut(parent);
@@ -120,7 +127,9 @@ fn block_dispatch(id: ast_stmt::BlockId, ast: &Ast, builder: &mut State) -> Vec<
         builder.parents = leaves;
     }
 
-    let leave_block = builder.graph.fresh_block(BasicBlockValue::LeaveBlock);
+    let leave_block = builder
+        .graph
+        .fresh_block(BasicBlockValue::LeaveBlock(block_label));
 
     for (parent, edge_kind) in builder.parents.iter().copied() {
         let edges: &mut Edges = builder.graph.get_mut(parent);

@@ -46,44 +46,44 @@ fn stmt_to_string(stmt: StmtId, ctxt: Ctxt) -> String {
     file.data[metadata.start..metadata.end].to_string()
 }
 
-struct GraphvizConfig {
+struct GraphNodeConfig {
     label: String,
     shape: String,
 }
 
-fn basic_block_stmt_to_graphviz_config(bb_stmt: BasicBlockValue, ctxt: Ctxt) -> GraphvizConfig {
+fn basic_block_stmt_to_graphviz_config(bb_stmt: BasicBlockValue, ctxt: Ctxt) -> GraphNodeConfig {
     match bb_stmt {
-        BasicBlockValue::EnterBlock => GraphvizConfig {
-            label: "_enter_block_".to_string(),
+        BasicBlockValue::EnterBlock(id) => GraphNodeConfig {
+            label: format!("_enter_block_{id}_"),
             shape: "box".to_string(),
         },
 
-        BasicBlockValue::LeaveBlock => GraphvizConfig {
-            label: "_leave_block_".to_string(),
+        BasicBlockValue::LeaveBlock(id) => GraphNodeConfig {
+            label: format!("_leave_block_{id}_"),
             shape: "box".to_string(),
         },
 
-        BasicBlockValue::StmtExpr(inner) => GraphvizConfig {
+        BasicBlockValue::StmtExpr(inner) => GraphNodeConfig {
             label: stmt_to_string(inner.stmt_id, ctxt),
             shape: "box".to_string(),
         },
 
-        BasicBlockValue::Declaration(inner) => GraphvizConfig {
+        BasicBlockValue::Declaration(inner) => GraphNodeConfig {
             label: stmt_to_string(inner.stmt_id, ctxt),
             shape: "box".to_string(),
         },
 
-        BasicBlockValue::EntryPoint => GraphvizConfig {
+        BasicBlockValue::EntryPoint => GraphNodeConfig {
             label: "".to_string(),
             shape: "doublecircle".to_string(),
         },
 
-        BasicBlockValue::EndPoint => GraphvizConfig {
+        BasicBlockValue::EndPoint => GraphNodeConfig {
             label: "".to_string(),
             shape: "point".to_string(),
         },
 
-        BasicBlockValue::Condition(expr) => GraphvizConfig {
+        BasicBlockValue::Condition(expr) => GraphNodeConfig {
             label: expr_to_string(expr.global_id(), ctxt),
             shape: "diamond".to_string(),
         },
