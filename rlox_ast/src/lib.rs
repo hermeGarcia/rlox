@@ -148,37 +148,6 @@ impl AstElem<&[u8], Identifier> for Ast {
     }
 }
 
-/// Functions TODO:\
-/// - [X] AST support.\
-/// - [ ] Parsing.\
-/// - [ ] Execution.
-pub struct Function {
-    pub name: Identifier,
-    pub params: Vec<Identifier>,
-    pub body: stmt::BlockId,
-}
-
-define_id!(FunctionId);
-
-impl Index<FunctionId> for Ast {
-    type Output = Function;
-
-    fn index(&self, index: FunctionId) -> &Self::Output {
-        &self.functions[index.inner()]
-    }
-}
-
-impl AstElem<Function, FunctionId> for Ast {
-    fn add(&mut self, elem: Function) -> FunctionId {
-        let fn_id = self.functions.len();
-
-        self.functions.push(elem);
-        self.function_metadata_buffer.push(None);
-
-        FunctionId::new(fn_id)
-    }
-}
-
 #[derive(Default)]
 pub struct Ast {
     stmt_id: usize,
@@ -189,10 +158,6 @@ pub struct Ast {
     identifier_metadata_buffer: AstVec<Option<SourceMetadata>, Identifier>,
 
     initial_block: Vec<Stmt>,
-
-    // Function buffers.
-    functions: Vec<Function>,
-    function_metadata_buffer: AstVec<Option<SourceMetadata>, FunctionId>,
 
     // Expression buffers.
     assign_buffer: expr::AssignVec,
@@ -207,28 +172,6 @@ pub struct Ast {
     ifelse_buffer: stmt::IfElseVec,
     while_buffer: stmt::WhileVec,
     stmt_metadata_buffer: AstVec<Option<SourceMetadata>, StmtId>,
-}
-
-impl StructVec<SourceMetadata, FunctionId> for Ast {
-    fn assign(&mut self, id: FunctionId, property: SourceMetadata) {
-        self.function_metadata_buffer[id] = Some(property);
-    }
-
-    fn get(&self, id: FunctionId) -> &SourceMetadata {
-        let Some(metadata) = &self.function_metadata_buffer[id] else {
-            panic!("{id:?} does not have metadata");
-        };
-
-        metadata
-    }
-
-    fn get_mut(&mut self, id: FunctionId) -> &mut SourceMetadata {
-        let Some(metadata) = &mut self.function_metadata_buffer[id] else {
-            panic!("{id:?} does not have metadata");
-        };
-
-        metadata
-    }
 }
 
 impl StructVec<SourceMetadata, Identifier> for Ast {
